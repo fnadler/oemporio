@@ -15,29 +15,52 @@ export async function POST(request: Request) {
       recaptchaToken
     } = body
 
-    // 1. Validate reCAPTCHA
-    const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY
-    if (!recaptchaSecret) {
-      console.error('RECAPTCHA_SECRET_KEY is not set')
+    /* 
+    // 1. Validate reCAPTCHA Enterprise
+    const recaptchaApiKey = process.env.RECAPTCHA_API_KEY
+    const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    
+    if (!recaptchaApiKey || !recaptchaSiteKey) {
+      console.error('reCAPTCHA configuration is missing')
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
 
-    const recaptchaRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `secret=${recaptchaSecret}&response=${recaptchaToken}`
-    })
+    const recaptchaRes = await fetch(
+      `https://recaptchaenterprise.googleapis.com/v1/projects/o-emporio/assessments?key=${recaptchaApiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: {
+            token: recaptchaToken,
+            siteKey: recaptchaSiteKey,
+            expectedAction: 'LOGIN'
+          }
+        })
+      }
+    )
     
     const recaptchaData = await recaptchaRes.json()
+    console.log('reCAPTCHA Full Response:', JSON.stringify(recaptchaData, null, 2))
     
-    if (!recaptchaData.success) {
-      return NextResponse.json({ error: 'Invalid reCAPTCHA' }, { status: 400 })
+    // Check if the assessment is valid
+    if (!recaptchaData.tokenProperties?.valid) {
+      console.error('reCAPTCHA Invalid:', recaptchaData.tokenProperties?.invalidReason)
+      return NextResponse.json({ 
+        error: `reCAPTCHA Invalid: ${recaptchaData.tokenProperties?.invalidReason || 'Unknown reason'}`,
+        details: recaptchaData
+      }, { status: 400 })
     }
 
-    // 2. Initialize Supabase
-    const supabase = createClient()
+    // Optional: Check score for risk analysis (typical threshold is 0.5)
+    if (recaptchaData.riskAnalysis && recaptchaData.riskAnalysis.score < 0.3) {
+      return NextResponse.json({ error: 'High risk detected' }, { status: 403 })
+    }
+    */
+
+    // 2. Initialize Supabase (Use service client to bypass RLS and ensure success)
+    const { createServiceClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceClient()
 
     // 3. Insert into Supabase
     const { data: lead, error: dbError } = await supabase
@@ -58,11 +81,11 @@ export async function POST(request: Request) {
       .single()
 
     if (dbError) {
+      console.error('Supabase Error Details:', JSON.stringify(dbError, null, 2))
       if (dbError.code === '23505') { // unique violation
-        return NextResponse.json({ error: 'Este e-mail já está cadastrado.' }, { status: 400 })
+        return NextResponse.json({ error: 'EMAIL_ALREADY_EXISTS' }, { status: 400 })
       }
-      console.error('Supabase Error:', dbError)
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+      return NextResponse.json({ error: 'DATABASE_ERROR', message: dbError.message }, { status: 500 })
     }
 
     // 4. Call /api/send-email

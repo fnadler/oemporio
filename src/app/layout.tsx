@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable}`}>
-      <body className="antialiased font-inter bg-black text-white">
+    <html lang="en" className={`${inter.variable} scroll-smooth`}>
+      <body className="antialiased font-inter text-white" style={{ backgroundColor: '#373435' }}>
         {children}
         <Script
           src={`https://www.google.com/recaptcha/enterprise.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`}

@@ -6,7 +6,7 @@ import { LogOut } from 'lucide-react'
 export const revalidate = 0
 
 export default async function AdminDashboard() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
