@@ -4,6 +4,7 @@ import { LeadsTable } from './LeadsTable'
 import { LogOut } from 'lucide-react'
 
 export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
