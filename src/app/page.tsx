@@ -45,7 +45,7 @@ export default function Home() {
         </button>
       </div>
       {/* Hero Section */}
-      <section className="bg-white text-black min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      <section className="bg-white text-black min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden" style={{ backgroundColor: '#ffffff', color: '#000000', colorScheme: 'light' }}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.03)_0%,transparent_100%)]"></div>
         
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center text-center space-y-8">

@@ -94,7 +94,13 @@ export async function POST(request: Request) {
       const emailRes = await fetch(`${baseUrl}/api/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, primeiro_nome, idioma_preferido })
+        body: JSON.stringify({ 
+          email, 
+          primeiro_nome, 
+          sobrenome,
+          telefone,
+          idioma_preferido 
+        })
       })
 
       if (!emailRes.ok) {
