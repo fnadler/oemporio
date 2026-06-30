@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O Empório — Novidades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Work+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+
+<section class="page novp">
+<div class="np-list" id="np-list"><header class="np-hero"><div class="menu-hero-o" style="background-image:url('assets/img/simbolo-o-branco.svg')"></div><nav class="nav"><div class="nav-inner">
+      <a class="brand" href="index.html"><img class="lockup" src="assets/img/logo-oemporio-branco.png" alt="O Empório — Comfort Food &amp; Craft Beer"></a>
+      <div class="nav-links"><a href="index.html">Início</a><a href="cardapio.html">Cardápio</a><a href="novidades.html">Novidades</a><a href="index.html#visit">Visite-nos</a></div>
+      <div class="nav-right"><div class="lang"><span class="on">PT</span><span>EN</span></div><button class="btn btn-accent" type="button" data-open="modal20">20% OFF</button></div>
+    </div></nav><div class="wrap"><span class="rotulo">Sempre acontecendo</span><h1>Novidades</h1><p class="sub">Mostras de cerveja, workshops, eventos da região e comunicados do pub — atualizados pela equipa.</p><div class="np-search"><input type="search" id="np-q" placeholder="Buscar por palavra-chave…" aria-label="Buscar novidades"></div></div></header><main class="np-main"><div class="wrap"><div class="np-count" id="np-count"></div><div class="np-grid nov-grid" id="np-grid"></div><div class="np-pager" id="np-pager"></div></div></main></div>
+<article class="np-detail" id="np-detail"></article><div class="npd-lb" id="npd-lb"><button class="x" type="button" data-lbclose>&times;</button><img id="npd-lb-img" src="" alt=""></div>
+<footer class="foot">
+    <div class="wrap">
+      <div class="foot-top">
+        <div><img class="word" src="assets/img/logo-oemporio-branco.png" alt="O Empório — Comfort Food &amp; Craft Beer"><p>Cervejas locais e boa companhia, no centro da Ericeira.</p></div>
+        <div><h5>Navegar</h5><a href="index.html">Início</a><a href="cardapio.html">Cardápio</a><a href="novidades.html">Novidades</a><a href="index.html#visit">Visite-nos</a></div>
+        <div><h5>Contato</h5><a href="#">mkt@oemporio.pt</a><a href="#">Rua de Sto. António 12B</a><a href="#">Ericeira, Portugal</a></div>
+        <div><h5>Siga</h5><a href="#">Instagram</a><a href="#">Untappd</a><a href="#">Google Maps</a></div>
+      </div>
+      <div class="foot-bot"><span>© 2025 O Empório · Ericeira</span><span>Conceito de site · FDN Design</span></div>
+    </div>
+  </footer>
+<nav class="botnav">
+    <a href="index.html"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Início</a>
+    <a href="cardapio.html"><svg viewBox="0 0 24 24"><path d="M6 3v7a2 2 0 0 0 4 0V3"/><path d="M8 10v11"/><path d="M16 3c-1.6 0-3 1.9-3 4.5S14.4 12 16 12"/><path d="M16 3v18"/></svg>Cardápio</a>
+    <a class="active" href="novidades.html"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.7 6.2.6-4.7 4.2 1.4 6.1L12 16.8 6.5 19.6l1.4-6.1L3.2 9.3l6.2-.6z"/></svg>Novidades</a>
+    <a href="index.html#visit"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Visite-nos</a>
+    <a class="cta" href="#" data-open="modal20"><svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a1.6 1.6 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a1.6 1.6 0 0 0 0-4z"/><path d="M15 6.5v11"/></svg>20% OFF</a>
+  </nav>
+<div class="modal" id="modal20" aria-hidden="true">
+    <div class="modal-overlay" data-close></div>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="m20t">
+      <button class="modal-x" type="button" data-close aria-label="Fechar">&times;</button>
+      <div class="modal-head">
+        <span class="rotulo">Cupão de boas-vindas</span>
+        <h2 id="m20t">Ganhe 20% <em>OFF</em></h2>
+        <p>Preencha os dados e receba o seu cupão para a primeira visita ao O Empório.</p>
+      </div>
+      <form class="f20" novalidate>
+        <div><label>Primeiro nome *</label><input type="text" name="fname" required></div>
+        <div><label>Sobrenome *</label><input type="text" name="lname" required></div>
+        <div class="full"><label>Telefone *</label><div class="phone"><select name="ddi" id="f20-ddi" aria-label="DDI"></select><input type="tel" name="phone" placeholder="912 345 678" required></div></div>
+        <div class="full"><label>E-mail *</label><input type="email" name="email" placeholder="voce@email.com" required></div>
+        <div><label>Idioma *</label><select name="lang" required><option value="pt">Português</option><option value="en">Inglês</option></select></div>
+        <div><label>Onde nasceu *</label><select name="born" id="f20-born" required></select></div>
+        <div class="full"><label>Vive em Portugal? *</label><select name="live" id="f20-live" required>
+          <option value="">Selecione…</option>
+          <option value="sim">Sim</option>
+          <option value="freq">Não, mas venho frequentemente</option>
+          <option value="nao">Não</option>
+          <option value="na">Prefiro não informar</option>
+        </select></div>
+        <div class="full hide" id="f20-distrow"><label>Distrito *</label><select name="dist" id="f20-dist"></select></div>
+        <label class="check"><input type="checkbox" name="coupon" required> Quero receber o cupão de 20% de desconto *</label>
+        <label class="check"><input type="checkbox" name="mkt"> Concordo em receber notícias, ofertas e comunicações de marketing do O Empório.</label>
+        <button class="btn submit" type="submit">Quero o meu cupão →</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script id="imgmap" type="application/json">{"lockup_neg": "assets/img/logo-oemporio-branco.png", "symbol_o": "assets/img/simbolo-o-branco.svg", "hero_photo": "assets/img/ambiente-fachada-poente.jpg", "amb_balcao_tap": "assets/img/ambiente-balcao-tap.jpg", "amb_balcao_view": "assets/img/ambiente-balcao-torneiras.jpg", "amb_outsite_noite": "assets/img/ambiente-fachada-noite.jpg", "amb_freezer": "assets/img/cervejas-freezer.jpg", "food_burger": "assets/img/comida-burger-beef.jpg", "food_costela": "assets/img/comida-costela-na-cerveja.jpg", "food_kafta": "assets/img/comida-kafta.jpg", "food_provoleta": "assets/img/comida-provoleta.jpg", "food_porquinhos": "assets/img/comida-3-porquinhos.jpg", "food_peru": "assets/img/comida-peru-panado.jpg"}</script>
+<script src="js/main.js"></script>
+<script src="js/novidades.js"></script>
+</body>
+</html>
