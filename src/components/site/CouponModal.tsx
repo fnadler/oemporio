@@ -152,7 +152,7 @@ function CouponModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       const result = await res.json().catch(() => ({}))
       if (!res.ok) {
         if (result.error === 'EMAIL_ALREADY_EXISTS') {
-          throw new Error('Este e-mail já está registado.')
+          throw new Error('Este e-mail já está registrado.')
         }
         throw new Error(result.error || 'Algo correu mal. Tente novamente.')
       }

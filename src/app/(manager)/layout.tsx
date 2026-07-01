@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ToastProvider } from '@/lib/manager/toast'
 import { StoreProvider } from '@/lib/manager/store'
+import { ConfirmProvider } from '@/lib/manager/confirm'
 import { Shell } from '@/components/manager/Shell'
 import './manager.css'
 
@@ -27,7 +28,9 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
       <body>
         <ToastProvider>
           <StoreProvider>
-            <Shell>{children}</Shell>
+            <ConfirmProvider>
+              <Shell>{children}</Shell>
+            </ConfirmProvider>
           </StoreProvider>
         </ToastProvider>
       </body>

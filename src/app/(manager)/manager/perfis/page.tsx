@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import { useManager } from '@/lib/manager/store'
+import { useConfirm } from '@/lib/manager/confirm'
 import { fmtDate, type Role } from '@/lib/manager/mock'
 import { useToast } from '@/lib/manager/toast'
 import { PageHeader, Badge, Modal, Field, inputCls, btn, Restricted } from '@/components/manager/ui'
 
 export default function PerfisPage() {
   const { data, role, inviteProfile, changeProfileRole, toggleProfileActive } = useManager()
+  const confirm = useConfirm()
   const [inviting, setInviting] = useState(false)
 
   if (role !== 'owner') return <Restricted />
@@ -60,7 +62,18 @@ export default function PerfisPage() {
                     </button>
                     <button
                       className={btn(p.is_active ? 'danger' : 'ghost')}
-                      onClick={() => toggleProfileActive(p.id)}
+                      onClick={async () => {
+                        if (
+                          !p.is_active ||
+                          (await confirm({
+                            title: 'Desativar perfil',
+                            message: `Desativar o acesso de ${p.name}? A pessoa perde o acesso ao Manager até ser reativada.`,
+                            confirmLabel: 'Desativar',
+                            tone: 'danger',
+                          }))
+                        )
+                          toggleProfileActive(p.id)
+                      }}
                     >
                       {p.is_active ? 'Desativar' : 'Ativar'}
                     </button>

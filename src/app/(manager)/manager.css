@@ -55,3 +55,28 @@ body {
 .mgr-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
 .mgr-scroll::-webkit-scrollbar-thumb { background: var(--color-g300); }
 .mgr-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ===== Interação ===== */
+/* Desktop: o ponteiro indica claramente o que é clicável */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+a[href],
+select,
+summary,
+label:has(> input[type='checkbox']),
+label:has(> input[type='radio']),
+input[type='checkbox'],
+input[type='radio'] {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+/* Toque: remove o flash azul e melhora o gesto em controles deslizantes/abas */
+button,
+[role='button'],
+a {
+  -webkit-tap-highlight-color: transparent;
+}

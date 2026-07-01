@@ -193,7 +193,7 @@ const formTranslations = {
     errorLastName: "O apelido é obrigatório",
     errorPhone: "O telemóvel com código do país é obrigatório",
     errorEmail: "E-mail inválido",
-    errorEmailExists: "Este e-mail já está registado.",
+    errorEmailExists: "Este e-mail já está registrado.",
     errorRecaptcha: "reCAPTCHA não carregado",
     errorGeneral: "Algo correu mal"
   }

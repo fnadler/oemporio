@@ -64,10 +64,6 @@ export default async function NovidadeDetail({
           <SiteNav />
           <div className="wrap">
             <div className="npd-eye">{post.eyebrow}</div>
-            <div className="npd-meta">
-              <span className={`rotulo ${post.rot || ''}`}>{post.cat}</span>
-              <span className="npd-date">{dateFull(post.data)}</span>
-            </div>
             <h1>{post.titulo}</h1>
             <p className="npd-sub">{post.sub}</p>
           </div>
@@ -81,6 +77,10 @@ export default async function NovidadeDetail({
         )}
 
         <div className="npd-body">
+          <div className="npd-meta">
+            <span className={`rotulo ${post.rot || ''}`}>{post.cat}</span>
+            <span className="npd-date">{dateFull(post.data)}</span>
+          </div>
           {post.corpo.map((block, i) => (
             <Block block={block} key={i} />
           ))}
