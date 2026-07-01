@@ -1,7 +1,7 @@
 # O Empório — Especificação Técnica do Backend (RASCUNHO para validação)
 
 > Documento técnico para o backend do site + CRM/Manager do **O Empório — Comfort Food & Craft Beer** (Ericeira, PT).
-> Base no escopo da **proposta comercial** (site institucional + CRM) e nas **telas do protótipo** (Home, Cardápio, Novidades + modal de cadastro).
+> Base no escopo da **proposta comercial** (site institucional + CRM) e nas **telas do protótipo/Manager** (Home, Cardápio, Novidades no site; e no Manager: Contatos, Vouchers, Fidelidade, Novidades, Cardápio, Configurações e Perfis — com telas dedicadas de cadastro/edição).
 > **Stack alvo:** Banco/Backend em **Supabase** · Hospedagem em **Vercel**.
 > Status: **rascunho** — revisar e validar antes de implementar.
 
@@ -26,7 +26,7 @@ Princípio condutor: **tudo o que é dinâmico no site é gerido pelo CRM** e se
 | Banco de dados | **Supabase Postgres** | Fonte única de verdade. RLS habilitado em todas as tabelas. |
 | Autenticação | **Supabase Auth** | Apenas para a equipe (admin). Convite/invite-only, MFA. |
 | Armazenamento de mídia | **Supabase Storage** | Fotos do cardápio, capas e galerias de novidades. |
-| Lógica de servidor | **Supabase Edge Functions** e/ou **Next.js API Routes** | Submissão do formulário, emissão de voucher, traduções, caches de integrações. |
+| Lógica de servidor | **Supabase Edge Functions** e/ou **Next.js API Routes** | Submissão do formulário, emissão de voucher, caches de integrações. |
 | Agendamentos | **Supabase Cron (pg_cron)** ou **Vercel Cron** | Atualizar caches (Instagram/Reviews), expirar vouchers, e **manter o projeto ativo** (ver §10). |
 
 > ✅ **Decisão (validada):** hospedagem em **Vercel Pro (~US$20/mês)** — o plano Hobby é apenas não‑comercial e não serve para um negócio. Banco em **Supabase Pro (~US$25/mês)** (sem pausa por inatividade, backups automáticos). Ver §9.
@@ -44,31 +44,44 @@ Convenções: `id uuid default gen_random_uuid() primary key`, `created_at times
 
 ### 3.1 Conteúdo do site (CMS)
 
-**`menu_categories`** — categorias do cardápio (Taps, Comidas, Vinhos, Bebidas…)
+**`menu_categories`** — categorias do cardápio (**gerenciáveis** no painel: criar, editar, reordenar, ativar/inativar)
 | coluna | tipo | notas |
 |---|---|---|
 | id | uuid | PK |
-| slug | text unique | `taps`, `comidas`, `vinhos`, `bebidas` |
-| name_pt / name_en | text | rótulo exibido |
-| layout | text | `list` ou `cards` (comidas = cards) |
-| sort_order | int | ordem na navegação |
-| is_active | boolean | |
+| slug | text unique | âncora no site (ex.: `comidas`) — opcional, derivável do nome |
+| name_pt / name_en | text | rótulo exibido (bilíngue) |
+| text_pt / text_en | text | texto/descrição da categoria (subtítulo no site, bilíngue) |
+| with_photo | boolean | se `true`, os produtos exigem **foto** e são exibidos como **cards** no site (ex.: Comidas); se `false`, lista simples |
+| sort_order | int | **ordem de exibição no site** (reordenável no painel via ↑/↓) |
+| is_active | boolean | controla exibição no site |
 
 **`menu_items`** — itens do cardápio
 | coluna | tipo | notas |
 |---|---|---|
 | id | uuid | PK |
 | category_id | uuid FK → menu_categories | |
-| name_pt / name_en | text | |
-| description_pt / description_en | text | |
-| price | numeric(8,2) | |
-| price_unit | text | ex.: `/ 33cl`, `copo` |
+| name_pt / name_en | text | bilíngue |
+| description_pt / description_en | text | bilíngue |
+| price | numeric(8,2) | valor (compartilhado entre idiomas) |
+| price_unit / price_unit_en | text | unidade bilíngue (ex.: `copo`/`glass`, `a partir de`/`from`, `/ 33cl`) |
 | meta | text | ex.: "LETRA · VILA VERDE — 5,0% ABV" (ou colunas próprias: brewery, origin, abv, ibu) |
-| tags | text[] | `local`, `convidada`, `novidade`, `tinto`… |
-| photo_path | text | caminho no Storage (comidas) |
+| photo_path | text | caminho no Storage (**obrigatório** quando a categoria tem `with_photo = true`) |
 | is_active | boolean | **ativar/inativar** (controla exibição no site) |
 | sold_out | boolean | estado "Esgotada" |
+| is_new | boolean | **destaque "Novo"** no cardápio |
 | sort_order | int | |
+
+**`menu_tags`** — tags do cardápio (**gerenciáveis**: nome PT/EN)
+| coluna | tipo | notas |
+|---|---|---|
+| id | uuid | PK |
+| label_pt / label_en | text | rótulo da tag (bilíngue) |
+
+**`menu_item_tags`** — relação N:N entre itens e tags (multiseleção no cadastro do item)
+| coluna | tipo | notas |
+|---|---|---|
+| item_id | uuid FK → menu_items | |
+| tag_id | uuid FK → menu_tags | PK composta (`item_id`, `tag_id`) |
 
 > **Cervejas (carta completa)** não fica nesta tabela: é uma **carta online externa** (link dinâmico). Guardar a URL em `site_settings`. Os **Taps** (torneiras do momento) ficam em `menu_items` (categoria `taps`).
 
@@ -76,20 +89,28 @@ Convenções: `id uuid default gen_random_uuid() primary key`, `created_at times
 | coluna | tipo | notas |
 |---|---|---|
 | id | uuid | PK |
-| slug | text unique | rota `/novidades/{slug}` |
+| slug | text unique | rota `/novidades/{slug}` (gerado do título) |
 | eyebrow_pt / eyebrow_en | text | sobre-título |
-| category_pt / category_en | text | rótulo (badge) |
+| category_id | uuid FK → post_categories | categoria (badge) — **gerenciável** |
 | title_pt / title_en | text | |
 | subtitle_pt / subtitle_en | text | subheadline/lede |
 | cover_path | text | imagem de capa (opcional) |
-| body | jsonb | blocos: `{type:'paragraph'|'heading'|'video'|'gallery', ...}` (espelha o protótipo) |
-| status | text | `draft` / `published` |
+| body | jsonb | blocos bilíngues: `{type:'paragraph'|'heading'|'video'|'gallery', ...}`. **Parágrafo guarda HTML** (editor WYSIWYG: negrito/itálico/lista/link); **galeria** com múltiplas imagens (Storage) |
+| status | text | `draft` / `published` (botão **Publicar** define `published`) |
 | published_at | timestamptz | |
 | event_date | timestamptz | para agenda/eventos |
 | author_id | uuid FK → profiles | |
 
+**`post_categories`** — categorias de novidades (**gerenciáveis**: nome PT/EN)
+| coluna | tipo | notas |
+|---|---|---|
+| id | uuid | PK |
+| label_pt / label_en | text | rótulo da categoria (bilíngue) |
+
 **`site_settings`** — chave/valor para configurações globais (uma linha por chave, ou JSONB único)
-- `external_beer_menu_url`, `instagram_handle`, `address`, `hours` (jsonb), `map_lat`, `map_lng`, `google_place_id`, `welcome_voucher_pct` (20), `welcome_voucher_validity_days`, etc.
+- `external_beer_menu_url`, `instagram_handle`, `phone_dialcode` (ex.: `+351`), `phone_number`, `address`, `map_lat`, `map_lng`, `google_place_id`, `welcome_voucher_pct` (20), `welcome_voucher_validity_days`.
+- `hours` (jsonb) — **lista de dias da semana**, cada um com `{ day, open (bool), hours (text) }`; ao ativar o dia, informa-se o horário (ex.: `"16:00 – 00:00"`); dia inativo = fechado.
+- `consent_version` (versão do texto) **e** `consent_text` — o **texto de consentimento** exibido no formulário do site (o carimbo por cliente fica em `customers.consent_version`/`consent_at`).
 
 ### 3.2 CRM — clientes, vouchers e fidelidade
 
@@ -124,26 +145,33 @@ Convenções: `id uuid default gen_random_uuid() primary key`, `created_at times
 | issued_at / expires_at / redeemed_at | timestamptz | |
 | redeemed_by | uuid FK → profiles | quem validou no balcão |
 
-**`loyalty_programs`** — **regra configurável** do cartão fidelidade (definida pelo admin)
+> **Ações no painel:** resgatar (→ `redeemed`), cancelar (→ `cancelled`) e **reativar** um `expired`/`cancelled` (→ `issued` com nova `expires_at`). Toda ação destrutiva (cancelar, apagar, inativar, excluir) pede **confirmação** no painel.
+
+O programa funciona como **cartela de selos por item de consumo** (espelha a cartela física: categorias de pint à esquerda, quantidades até o resgate à direita). Podem existir **vários programas**; cada cliente participa de **no máximo um** por vez.
+
+**`loyalty_programs`** — programa de fidelidade (**gerenciável**: criar, editar, inativar/reativar)
 | coluna | tipo | notas |
 |---|---|---|
 | id | uuid | PK |
 | name | text | ex.: "Cartão Cerveja" |
-| eligible_scope | text | `category` ou `item` |
-| eligible_ref | uuid/text | qual categoria/produto acumula |
-| points_required | int | ex.: 10 |
-| reward_description | text | ex.: "1 cerveja grátis" |
-| is_active | boolean | |
-| starts_at / ends_at | timestamptz | opcional |
+| points_required | int | **selos necessários para o resgate** (ex.: 5) |
+| is_active | boolean | ao salvar/criar fica ativo; pode ser inativado/reativado |
+| activated_at | timestamptz | data de ativação |
+| deactivated_at | timestamptz | data de inativação (null quando ativo) |
 
-**`loyalty_cards`** — cartão por cliente/programa (saldo derivado das entradas)
-- `id`, `customer_id` FK, `program_id` FK, `created_at`. (saldo calculado de `loyalty_entries`)
+**`loyalty_program_items`** — **itens de consumo** do programa (N, configuráveis; ex.: `56`, `33`, `28`)
+- `id`, `program_id` FK, `label` (rótulo do item), `sort_order`.
 
-**`loyalty_entries`** — registro de consumo (selos)
-- `id`, `card_id` FK, `qty` int, `recorded_by` FK profiles, `recorded_at`, `note`.
+**`loyalty_cards`** — cartão do cliente (**1 por cliente**; atribuído a um programa)
+- `id`, `customer_id` FK **unique**, `program_id` FK, `created_at`. Atribuição explícita no painel ("Atribuir programa").
 
-**`loyalty_rewards`** — resgates do benefício
-- `id`, `card_id` FK, `program_id` FK, `redeemed_at`, `recorded_by` FK profiles.
+**`loyalty_cartelas`** — cartela (linha) por item; acumula selos até o resgate
+- `id`, `card_id` FK, `item_id` FK → `loyalty_program_items`, `redeemed_at` timestamptz, `redeemed_by` FK profiles.
+- Existe **uma cartela ativa por item** (`redeemed_at is null`). Ao atingir `points_required` selos e resgatar, ela é marcada como resgatada e **abre-se uma nova cartela zerada** do mesmo item.
+
+**`loyalty_stamps`** — selos (1 registro por selo, com histórico de data/hora e operador)
+- `id`, `cartela_id` FK, `recorded_by` FK profiles, `recorded_at` timestamptz.
+- **Consumidos** = contagem de selos; **resgatados** = cartelas com `redeemed_at`. Permite **desfazer o último** selo da cartela ativa (correção).
 
 ### 3.3 Administração e auditoria
 
@@ -151,6 +179,7 @@ Convenções: `id uuid default gen_random_uuid() primary key`, `created_at times
 - `id` (= auth.uid), `name`, `email`, `role` enum (`owner`, `staff`), `is_active`, `invited_by` FK→profiles, `invited_at`, `last_login_at`.
 - **Papéis:** `owner` (sócios/gestor) configura regras, programa de fidelidade, configurações do site **e gere os perfis admin** (convidar, alterar papel, ativar/desativar). `staff` opera o dia a dia (validar voucher, registar consumo, gerir cardápio/novidades) mas **não** gere usuários nem configurações sensíveis.
 - O owner **não pode rebaixar/remover a si próprio** se for o último owner ativo (regra de proteção).
+- **Meu perfil (self-service):** qualquer usuário logado vê os próprios dados (nome, e-mail, papel, último acesso) e **altera a própria senha** (via Supabase Auth `updateUser`). Acesso pelo menu do usuário na topbar.
 
 **`audit_log`** — trilha de auditoria de ações sensíveis
 - `id`, `actor_id`, `action`, `table_name`, `record_id`, `diff` jsonb, `ip`, `created_at`.
@@ -161,7 +190,7 @@ Convenções: `id uuid default gen_random_uuid() primary key`, `created_at times
 - **`email_log`** (opcional): envios de voucher (status, provider id).
 
 ### 3.5 i18n (PT/EN)
-Idiomas confirmados: **Português de Portugal (pt-PT)** como canônico + **Inglês (en)** com **tradução automática**. Estratégia recomendada: **colunas `*_pt` (canônico) + `*_en`**. O EN é gerado por IA na publicação (Edge Function) e **fica editável** pelo admin (a tradução automática nunca sobrescreve um EN editado manualmente — usar flag `*_en_locked`). O seletor de idioma do site serve o conteúdo conforme o locale.
+Idiomas: **Português de Portugal (pt-PT)** + **Inglês (en)**. Estratégia: **colunas `*_pt` e `*_en`**. **Decisão atualizada:** a **tradução é manual** — o administrador de conteúdo preenche PT e EN em cada campo (o editor tem abas PT/EN). **Não** há tradução automática por IA (a Edge Function `translate` foi removida do escopo). O seletor de idioma do site serve o conteúdo conforme o locale; se o EN estiver vazio, recomenda-se **fallback para o PT**.
 
 ---
 
@@ -227,16 +256,16 @@ create policy "admin manages posts"
    - Admin busca por código/e-mail → marca `redeemed` (`redeemed_at`, `redeemed_by`). Estado controla "usado/não usado". Job diário expira vencidos.
    - **Validade configurável pelo admin:** a duração do cupão (`welcome_voucher_validity_days`) e a % de desconto ficam em `site_settings`, editáveis no painel — sem precisar de deploy.
 
-3. **Cartão fidelidade configurável**
-   - Admin cria/edita `loyalty_programs` (produto elegível, pontos necessários, benefício).
-   - Equipe registra consumo → `loyalty_entries` (qty). Saldo = soma das entries − resgates.
-   - Quando saldo ≥ `points_required` → habilita resgate → grava `loyalty_rewards` e debita.
+3. **Cartão fidelidade (cartela de selos)**
+   - Admin cria/edita `loyalty_programs` (nome, selos p/ resgate, **itens de consumo**), inativa/reativa (com confirmação; datas de ativação/inativação registradas).
+   - Cliente é **atribuído** a um programa (cria `loyalty_cards`, 1 por cliente). Equipe **marca selos** por item — cada selo vira um `loyalty_stamps` (com operador e data/hora); permite **desfazer o último**.
+   - Ao completar `points_required` selos numa cartela → habilita **resgate** (com confirmação) → marca `loyalty_cartelas.redeemed_at`/`redeemed_by` e **abre nova cartela** zerada do item.
 
-4. **CMS de novidades** — CRUD em `posts`, upload de mídia no Storage, `status` draft/published, blocos `body` (parágrafo/subtítulo/vídeo/galeria) iguais ao protótipo. Tradução EN sob demanda.
+4. **CMS de novidades** — CRUD em `posts` (**tela dedicada**, não modal), **categorias gerenciáveis** (`post_categories`), blocos `body` (parágrafo em **HTML/WYSIWYG** com negrito/itálico/lista/link, subtítulo, vídeo, **galeria com múltiplas imagens**), upload no Storage, `status` `draft`/`published` (botão **Publicar**). PT e EN manuais.
 
-5. **CMS de cardápio** — CRUD em `menu_items`, **ativar/inativar** (`is_active`), `sold_out`, ordenação, foto (Storage) para comidas.
+5. **CMS de cardápio** — CRUD em `menu_items` (**tela dedicada**), **categorias e tags gerenciáveis** (`menu_categories` com ordem, `with_photo` e texto; `menu_tags` em **multiseleção**). Toggles `is_active`, `sold_out` e `is_new` (destaque). **Foto obrigatória** quando a categoria tem `with_photo = true`. Cervejas via carta externa.
 
-6. **i18n PT/EN** — Edge Function `translate` chama um LLM (baixo custo) ao publicar, preenche `*_en`, admin pode editar. Site serve idioma conforme seletor.
+6. **i18n PT/EN** — conteúdo bilíngue preenchido **manualmente** pelo admin (abas/campos PT e EN). Site serve o idioma conforme o seletor, com **fallback para PT** quando o EN estiver vazio.
 
 7. **Feed do Instagram** — ⚠️ a *Basic Display API* foi **descontinuada (dez/2024)**. Usar a **Instagram API com Instagram Login / Graph API**, que exige **conta profissional (Business/Creator)**. Edge Function + **cron** busca e grava em `instagram_cache`; o site lê o cache (protege o token e evita rate limits). Alternativa de baixo custo: widget (Behold/EmbedSocial — free tier).
 
@@ -295,7 +324,7 @@ create policy "admin manages posts"
 | Analytics | **Umami/Plausible (self-host)** ou Vercel Analytics | Grátis / baixo |
 | Instagram | **Graph API** (conta profissional) + cache | Grátis (requer conta business) |
 | Avaliações Google | **Places API** + cache agressivo | Baixo (cachear!) |
-| Tradução PT→EN | LLM por API, em lote na publicação | Centavos/mês |
+| Tradução PT→EN | **Manual** (admin preenche PT e EN) | — (sem custo de IA) |
 | Imagens | Supabase Storage + `next/image` | Grátis no free tier |
 
 ---
@@ -341,14 +370,17 @@ create policy "admin manages posts"
 | 2 | Orçamento | **Cenário robusto** (~US$45/mês: Vercel Pro + Supabase Pro) |
 | 3 | Instagram | Conta **já profissional** → feed via **Instagram Graph API** + cache |
 | 4 | Google | **Avaliações e nota dinâmicas** via Places API + cache (1–2×/dia) |
-| 5 | Idiomas | **Português de Portugal (pt-PT)** + **Inglês** com **tradução automática** (editável) |
-| 6 | Perfis admin | **Gestão de perfis** com dois papéis: **owner** e **staff** (convite, papel, ativar/desativar) |
-| 7 | Validade do voucher / fidelidade | **Configuráveis pelo admin** (em `site_settings` e `loyalty_programs`) |
+| 5 | Idiomas | **pt-PT** + **Inglês**, ambos preenchidos **manualmente** pelo admin (sem tradução automática); fallback para PT |
+| 6 | Perfis admin | **Gestão de perfis** com dois papéis: **owner** e **staff** (convite, papel, ativar/desativar) + **Meu perfil** self-service (trocar senha) |
+| 7 | Validade do voucher / fidelidade | **Configuráveis pelo admin** (em `site_settings` e `loyalty_programs`); voucher pode ser **reativado** |
+| 8 | Fidelidade | Modelo de **cartela de selos** por item; **1 programa por cliente**; programas e itens de consumo **configuráveis**; selos com histórico (operador + data/hora) |
+| 9 | Cardápio | **Categorias e tags gerenciáveis**; categoria com `with_photo` (produtos em cards) e **ordem** reordenável; item com destaque `is_new` e campos PT/EN (nome, descrição, unidade) |
+| 10 | Ações destrutivas | Sempre exigem **confirmação** no painel |
 
 ### Próximos passos
 1. Eu transformo este rascunho na **versão final** da spec (sem marcações de rascunho).
 2. Gerar o **script SQL completo** de criação do schema + policies RLS + triggers (migração inicial Supabase).
-3. Definir as **Edge Functions** (contratos de entrada/saída): `submit-lead`, `redeem-voucher`, `translate`, `refresh-instagram`, `refresh-google-reviews`, `invite-admin`.
+3. Definir as **Edge Functions** (contratos de entrada/saída): `submit-lead`, `redeem-voucher`, `refresh-instagram`, `refresh-google-reviews`, `invite-admin`. *(A `translate` foi removida — tradução é manual.)*
 4. Mapear as **telas do painel** (CRM/Manager) a partir destas tabelas e papéis.
 
 ---
