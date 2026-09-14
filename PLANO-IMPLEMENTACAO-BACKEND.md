@@ -42,10 +42,11 @@ RLS habilitado e com policy em toda tabela, na mesma migração que a cria. Duas
 
 ## Fase 2 — Autenticação e perfis da equipe
 
-- [ ] Desabilitar signup público no Supabase Auth (Authentication → Settings) — acesso só por convite.
-- [ ] Criar o primeiro usuário `owner` (você) via Authentication → Users → Invite, e inserir a linha correspondente em `profiles` com `role = 'owner'`.
-- [ ] Ativar MFA/TOTP nas configurações de Auth.
-- [ ] Testar login local com esse usuário antes de seguir para as próximas fases (todas dependem de `auth.uid()` nas policies).
+- [x] Criar o primeiro usuário `owner` — Fabiano Nadler (`fabiano@fdndesign.com.br`), convidado via Admin API (`/auth/v1/invite`), com a linha correspondente em `profiles` (`role = 'owner'`).
+- [x] Testar login (password grant) e confirmar que a RLS reconhece a sessão: criado um 2º perfil (`staff`) de teste, o owner autenticado leu os 2 (policy "owner reads all profiles" confirmada, não é só self-select); um pedido anônimo sem login leu 0. Perfil de teste removido depois.
+- [ ] Desabilitar cadastro público no Supabase Auth (dashboard: Authentication → Sign In / Providers → desligar "Allow new users to sign up") — pendente, só dá pelo dashboard.
+- [ ] MFA/TOTP não precisa de toggle de projeto — fica disponível para qualquer usuário ativar (`auth.mfa.enroll`); a tela para isso é construída na Fase 5.
+- [ ] **Pendência:** o link de convite por e-mail levou para a home do site (`#access_token=...`) sem nenhuma página tratando o token — porque a tela de "definir senha" ainda não existe (é trabalho da Fase 5). Por ora a senha do owner foi definida direto via Admin API para permitir o teste; ele deve trocá-la assim que o login real do Manager existir.
 
 ## Fase 3 — Migração dos dados legados (`leads` → `customers` + `vouchers`)
 
