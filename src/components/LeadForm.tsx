@@ -245,8 +245,8 @@ export function LeadForm({ lang }: LeadFormProps) {
         window.grecaptcha.enterprise.ready(async () => {
           try {
             const token = await window.grecaptcha.enterprise.execute(
-              process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY, 
-              { action: 'LOGIN' }
+              process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+              { action: 'submit_lead' }
             )
             resolve(token)
           } catch (err) {

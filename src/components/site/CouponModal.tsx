@@ -105,7 +105,7 @@ function CouponModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
     return new Promise<string | undefined>((resolve) => {
       window.grecaptcha.enterprise.ready(async () => {
         try {
-          resolve(await window.grecaptcha.enterprise.execute(siteKey, { action: 'LOGIN' }))
+          resolve(await window.grecaptcha.enterprise.execute(siteKey, { action: 'submit_lead' }))
         } catch {
           resolve(undefined)
         }
@@ -141,6 +141,8 @@ function CouponModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       vive_portugal: live,
       distrito: liveIsSim ? String(fd.get('dist') || '') : '',
       recaptchaToken: await recaptcha(),
+      // honeypot: campo oculto — só bots preenchem
+      website: String(fd.get('website') || ''),
     }
 
     try {
@@ -202,6 +204,23 @@ function CouponModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
             </div>
 
             <form className="f20" ref={formRef} noValidate onSubmit={handleSubmit}>
+              {/* honeypot anti-bot: campo oculto do olhar humano, mas visível a bots que preenchem tudo */}
+              <input
+                type="text"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  left: '-9999px',
+                  width: 1,
+                  height: 1,
+                  opacity: 0,
+                  pointerEvents: 'none',
+                }}
+              />
+
               {error && (
                 <div
                   className="full"
