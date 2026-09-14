@@ -23,6 +23,8 @@ const formSchema = (t: any) => z.object({
     message: t.errorTerms
   }),
   aceitou_marketing: z.boolean().optional(),
+  // honeypot: campo oculto — só bots preenchem
+  website: z.string().optional(),
 })
 
 const countries = [
@@ -245,8 +247,8 @@ export function LeadForm({ lang }: LeadFormProps) {
         window.grecaptcha.enterprise.ready(async () => {
           try {
             const token = await window.grecaptcha.enterprise.execute(
-              process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY, 
-              { action: 'LOGIN' }
+              process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+              { action: 'submit_lead' }
             )
             resolve(token)
           } catch (err) {
@@ -285,6 +287,16 @@ export function LeadForm({ lang }: LeadFormProps) {
   return (
     <>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6 sm:p-10 border border-white/20 shadow-2xl" style={{ backgroundColor: '#373435' }}>
+        {/* honeypot anti-bot: campo oculto do olhar humano, mas visível a bots que preenchem tudo */}
+        <input
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+          {...register('website')}
+        />
+
         {error && (
           <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 text-sm font-inter">
             {error}
