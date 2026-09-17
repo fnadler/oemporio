@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/cron/expire-vouchers", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/refresh-instagram", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/refresh-google-reviews", "schedule": "0 6,18 * * *" }
+  ]
+}

@@ -57,15 +57,18 @@ RLS habilitado e com policy em toda tabela, na mesma migração que a cria. Duas
 
 **Nota:** os dados pessoais dos 25 clientes (nome, e-mail, telefone) agora também existem no projeto de staging — mesma política de acesso (RLS) se aplica lá, mas vale lembrar ao dar acesso de staging a alguém.
 
-## Fase 4 — Edge Functions / rotas de API
+## Fase 4 — Edge Functions / rotas de API ✅ implementadas e testadas em staging
 
-Implementar (como Next.js API Routes, seguindo o padrão que já existe em `/api/leads`, ou como Supabase Edge Functions — manter consistência com o que já está em produção):
+Implementadas como Next.js API Routes (consistente com o que já está em produção). Lógica de negócio separada em `src/lib/backend/*.ts` (funções puras, recebem o client Supabase já pronto) das rotas em `src/app/api/**/route.ts` (só cuidam de HTTP/sessão) — dá pra testar contra qualquer projeto sem subir o servidor Next, que foi como validei tudo contra staging (15/15 asserções passaram).
 
-- [ ] **`submit-lead`** — substitui o `/api/leads` atual: valida (zod) → honeypot → CAPTCHA (score ≥0.5) → rate limit → `upsert` em `customers` → gera `voucher` → chama o envio de e-mail em processo (nunca endpoint público — regra já em vigor desde a correção de segurança).
-- [ ] **`redeem-voucher`** — recebe código/e-mail, exige sessão autenticada, seta `redeemed_at`/`redeemed_by` a partir do usuário da sessão (nunca do payload).
-- [ ] **`refresh-instagram`** — cron periódico, grava em `instagram_cache`.
-- [ ] **`refresh-google-reviews`** — cron periódico, usa `site_settings.google_place_id`, grava em `google_reviews_cache`.
-- [ ] **`invite-admin`** — dispara o convite via Supabase Auth e cria a linha em `profiles`.
+- [x] **`submit-lead`** (`src/lib/backend/submitLead.ts` + `POST /api/submit-lead`) — zod → honeypot → CAPTCHA (score ≥0.5, ação `submit_lead`) → rate limit → grava em `customers` (agora persistindo `pais_nascimento`/`vive_portugal`/`distrito`, que o `/api/leads` legado descartava) → gera `voucher` com % e validade lidos de `site_settings` → envia e-mail em processo. Testado: sucesso, e-mail duplicado, honeypot, payload inválido, captcha reprovado.
+- [x] **`redeem-voucher`** (`redeemVoucher.ts` + `POST /api/redeem-voucher`) — estendido para as 3 ações do Manager (`redeem`/`cancel`/`reactivate`, não só resgate). Usa o client **autenticado do chamador** (nunca service_role) para que RLS + o trigger `stamp_voucher_redemption` carimbem `redeemed_by`/`redeemed_at` de verdade a partir da sessão. Testado com login real do owner: redeem, re-redeem bloqueado, cancel, reactivate (nova validade lida de `site_settings`), chamada sem sessão.
+- [x] **`invite-admin`** (`inviteAdmin.ts` + `POST /api/invite-admin`) — confirma que quem chama é owner ativo (via RLS no próprio client do chamador) antes de usar `service_role` para convidar (Auth Admin API) e criar o perfil. Testado: convite + perfil criados com `invited_by` correto, e bloqueio quando o chamador não é owner.
+- [x] Job diário **`expire-vouchers`** (`expireVouchers.ts` + `GET /api/cron/expire-vouchers`) — marca `issued` vencido como `expired`. Testado com um voucher vencido de propósito.
+- [x] **`refresh-instagram`** e **`refresh-google-reviews`** — implementadas (`GET /api/cron/refresh-instagram` e `.../refresh-google-reviews`), mas ainda não testáveis de ponta a ponta: faltam credenciais reais (`INSTAGRAM_ACCESS_TOKEN`/`INSTAGRAM_BUSINESS_ACCOUNT_ID`, `GOOGLE_PLACES_API_KEY`), que não temos configuradas em nenhum ambiente ainda. O código já trata a ausência com um erro claro (`CONFIG_MISSING`) em vez de quebrar.
+- [x] Todos os endpoints de cron protegidos por `CRON_SECRET` (`src/lib/security/cronAuth.ts`) — a Vercel injeta esse header automaticamente nas chamadas de cron quando a env var está configurada no projeto. **Pendência:** definir `CRON_SECRET` nas env vars do Vercel antes de ir pra produção (por enquanto, sem a variável, os endpoints recusam por padrão — "fail closed").
+- [x] `vercel.json` com os 3 crons agendados (expire-vouchers diário, refresh-instagram a cada 6h, refresh-google-reviews 2x/dia) — só passa a valer quando essa branch virar produção (Vercel só roda cron em deployments de produção).
+- [ ] Trocar `/api/leads` (legado) pelo novo `/api/submit-lead` na Fase 5, quando o `CouponModal.tsx` for integrado de verdade.
 - [ ] Job diário (cron) que marca `vouchers` vencidos como `expired`.
 
 Documentar o contrato (payload de entrada, resposta, códigos de erro) de cada uma antes de implementar — evita retrabalho quando o frontend for integrar.
