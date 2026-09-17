@@ -48,12 +48,14 @@ RLS habilitado e com policy em toda tabela, na mesma migração que a cria. Duas
 - [ ] MFA/TOTP não precisa de toggle de projeto — fica disponível para qualquer usuário ativar (`auth.mfa.enroll`); a tela para isso é construída na Fase 5.
 - [ ] **Pendência:** o link de convite por e-mail levou para a home do site (`#access_token=...`) sem nenhuma página tratando o token — porque a tela de "definir senha" ainda não existe (é trabalho da Fase 5). Por ora a senha do owner foi definida direto via Admin API para permitir o teste; ele deve trocá-la assim que o login real do Manager existir.
 
-## Fase 3 — Migração dos dados legados (`leads` → `customers` + `vouchers`)
+## Fase 3 — Migração dos dados legados (`leads` → `customers` + `vouchers`) ✅ validada em staging
 
-- [ ] Escrever um script de ETL (Node, usando o `service_role` client) que lê `leads` e grava em `customers`/`vouchers`, seguindo o mapeamento de campos já documentado na spec (§2, "Migração dos dados legados").
-- [ ] Rodar o script contra **staging** primeiro, com uma cópia dos dados de produção (export/import, não apontar staging direto pra base viva).
-- [ ] Validar: contagem de linhas bate, e-mails únicos preservados, nenhum `voucher` órfão sem `customer`.
-- [ ] Só então rodar em produção, num horário de baixo tráfego, com backup prévio do banco.
+- [x] Escrito `scripts/migrate-leads.mjs` — lê `leads` de produção (só leitura, nunca escreve lá) e grava em `customers`/`vouchers` no destino (staging por padrão, `--target=prod` quando for a hora). Idempotente (pula e-mail já migrado) e com `--dry-run` por padrão (só grava com `--apply`).
+- [x] Rodado contra staging: **25 leads → 25 customers + 25 vouchers** (17 `issued`, 4 `redeemed`, 4 `expired` — calculado retroativamente a partir de `welcome_voucher_validity_days`, já que `leads` nunca guardou validade).
+- [x] Validado: contagem bate (25/25), sem erro de e-mail duplicado, todo voucher tem `customer_id` válido (garantido pela FK). Rodei o script uma 2ª vez para confirmar idempotência: 0 migrados, 25 pulados — sem duplicar.
+- [ ] Rodar em **produção só depois da Fase 1 aplicar as migrações lá** (hoje o banco de produção ainda não tem as tabelas `customers`/`vouchers` — só staging tem). Fica alinhado com a Fase 7 (corte para produção): aplicar schema em prod → rodar `migrate-leads.mjs --apply --target=prod` → só então trocar as variáveis de ambiente do site para os novos endpoints.
+
+**Nota:** os dados pessoais dos 25 clientes (nome, e-mail, telefone) agora também existem no projeto de staging — mesma política de acesso (RLS) se aplica lá, mas vale lembrar ao dar acesso de staging a alguém.
 
 ## Fase 4 — Edge Functions / rotas de API
 
