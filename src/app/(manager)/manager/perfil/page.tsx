@@ -5,18 +5,21 @@ import { useRouter } from 'next/navigation'
 import { useManager } from '@/lib/manager/store'
 import { useToast } from '@/lib/manager/toast'
 import { fmtDate } from '@/lib/manager/mock'
+import { createClient } from '@/lib/supabase/client'
 import { PageHeader, Field, Badge, inputCls, btn } from '@/components/manager/ui'
 
 export default function PerfilPage() {
   const { data, user, role } = useManager()
   const toast = useToast()
   const router = useRouter()
+  const supabase = createClient()
 
   const profile = data.profiles.find((p) => p.name === user) ?? null
 
   const [cur, setCur] = useState('')
   const [pwd, setPwd] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const info: [string, string][] = [
     ['Nome', profile?.name ?? user],
@@ -25,15 +28,47 @@ export default function PerfilPage() {
     ['Último acesso', fmtDate(profile?.last_login_at ?? null)],
   ]
 
-  function changePassword() {
+  async function changePassword() {
     if (!cur.trim()) return toast('Informe a senha atual.', 'danger')
     if (pwd.length < 6) return toast('A nova senha deve ter ao menos 6 caracteres.', 'danger')
     if (pwd !== confirm) return toast('A confirmação não confere.', 'danger')
-    // mock — sem backend de autenticação
-    setCur('')
-    setPwd('')
-    setConfirm('')
-    toast('Senha alterada com sucesso.')
+
+    setSaving(true)
+    try {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+      if (!authUser?.email) {
+        toast('Sessão inválida — faça login novamente.', 'danger')
+        return
+      }
+      // confirma a senha atual antes de trocar (Supabase não pede isso sozinho).
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: authUser.email,
+        password: cur,
+      })
+      if (reauthError) {
+        toast('Senha atual incorreta.', 'danger')
+        return
+      }
+      const { error: updateError } = await supabase.auth.updateUser({ password: pwd })
+      if (updateError) {
+        toast(updateError.message, 'danger')
+        return
+      }
+      setCur('')
+      setPwd('')
+      setConfirm('')
+      toast('Senha alterada com sucesso.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    router.push('/manager/login')
+    router.refresh()
   }
 
   return (
@@ -42,11 +77,7 @@ export default function PerfilPage() {
         title="Meu perfil"
         subtitle={profile?.email}
         actions={
-          <button
-            type="button"
-            className={`${btn('ghost')} min-h-13`}
-            onClick={() => router.push('/manager/login')}
-          >
+          <button type="button" className={`${btn('ghost')} min-h-13`} onClick={handleSignOut}>
             Sair
           </button>
         }
@@ -93,8 +124,13 @@ export default function PerfilPage() {
               />
             </Field>
             <div className="pt-1">
-              <button type="button" className={`${btn('primary')} min-h-13`} onClick={changePassword}>
-                Alterar senha
+              <button
+                type="button"
+                className={`${btn('primary')} min-h-13`}
+                disabled={saving}
+                onClick={changePassword}
+              >
+                {saving ? 'Alterando…' : 'Alterar senha'}
               </button>
             </div>
           </div>

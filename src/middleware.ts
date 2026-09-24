@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect /admin routes
+  // Protect /admin routes (v1, legado)
   if (request.nextUrl.pathname.startsWith('/admin')) {
     // Exclude login page from protection
     if (request.nextUrl.pathname === '/admin/login') {
@@ -71,9 +71,38 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect /manager routes (v2, CRM real) — acesso exige perfil ativo em
+  // `profiles` (staff ou owner), nunca um e-mail fixo. A checagem de papel
+  // (owner-only) para telas específicas (Configurações, Perfis) é feita nas
+  // próprias telas, não aqui.
+  if (request.nextUrl.pathname.startsWith('/manager')) {
+    const isLoginPage = request.nextUrl.pathname === '/manager/login'
+
+    const isActiveProfile = async () => {
+      if (!user) return false
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_active')
+        .eq('id', user.id)
+        .maybeSingle()
+      return !!profile?.is_active
+    }
+
+    if (isLoginPage) {
+      if (user && (await isActiveProfile())) {
+        return NextResponse.redirect(new URL('/manager', request.url))
+      }
+      return response
+    }
+
+    if (!user || !(await isActiveProfile())) {
+      return NextResponse.redirect(new URL('/manager/login', request.url))
+    }
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/manager/:path*'],
 }

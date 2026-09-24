@@ -73,12 +73,20 @@ Implementadas como Next.js API Routes (consistente com o que já está em produ�
 
 Documentar o contrato (payload de entrada, resposta, códigos de erro) de cada uma antes de implementar — evita retrabalho quando o frontend for integrar.
 
-## Fase 5 — Integração do frontend
+## Fase 5 — Integração do frontend (em andamento)
 
 **Site público:**
-- [ ] Cardápio e Novidades passam a ler de `menu_items`/`posts` (Supabase) em vez de dados estáticos/mock.
-- [ ] `CouponModal.tsx` passa a chamar `submit-lead` (novo contrato) em vez do `/api/leads` legado.
+- [x] `CouponModal.tsx` passa a chamar `/api/submit-lead` (novo contrato) em vez do `/api/leads` legado.
+- [ ] Cardápio e Novidades passam a ler de `menu_items`/`posts` (Supabase) em vez de dados estáticos/mock. **Pendência de decisão:** o design atual do Cardápio tem campos bem específicos por item (`rot`, `brick`, `off`, cores por card) que não mapeiam 1:1 com o schema genérico (`is_new`, `sold_out`, `tag_ids`) — precisa decidir como simplificar o layout ou estender o schema antes de converter. Também precisa popular dados reais no Supabase (hoje só staging tem schema, e vazio de cardápio/posts) antes do site parar de mostrar o conteúdo estático.
 - [ ] Seção do mapa/avaliações passa a ler `google_reviews_cache` e `site_settings`.
+
+**Autenticação do Manager (concluída):**
+- [x] Middleware real em `/manager/:path*` (mesmo padrão do `/admin`), mas checando `profiles.is_active` em vez de e-mail fixo.
+- [x] Login real (`supabase.auth.signInWithPassword`) e fluxo de "definir senha" a partir do link de convite (`#access_token=...&type=invite`) — a lacuna identificada na Fase 2 está fechada.
+- [x] Corrigidos 3 pontos que só *navegavam* para `/manager/login` sem encerrar a sessão de verdade (Topbar, Sidebar, Meu Perfil) — agora chamam `supabase.auth.signOut()`.
+- [x] "Meu perfil" → alterar senha agora é real (reautentica com a senha atual via `signInWithPassword`, depois `updateUser`), não mais mock.
+- [x] Removido o seletor de papel (owner/staff) que existia na Topbar como recurso de demonstração do protótipo — o papel real virá do perfil autenticado quando a store for trocada.
+- [x] Testado de ponta a ponta com Playwright (instalado como devDependency): acesso não autenticado bloqueado, credenciais erradas mostram erro, login correto entra no dashboard, sessão persiste ao recarregar, sign-out realmente encerra a sessão (tentativa de voltar pra `/manager` é bloqueada de novo).
 
 **Manager:**
 - [ ] Substituir `src/lib/manager/store.tsx` (mock em memória) por um client real do Supabase — mesma interface (`useManager()`) por trás, mas as funções (`saveItem`, `redeemVoucher`, `markStamp` etc.) passam a fazer queries/mutations reais, preservando o contrato que a UI já espera. Isso minimiza mudança nas 17 telas já construídas.

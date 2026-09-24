@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useManager } from '@/lib/manager/store'
+import { createClient } from '@/lib/supabase/client'
 
 const NAV = [
   { href: '/manager', label: 'Dashboard', exact: true },
@@ -28,7 +29,16 @@ export function Sidebar({
   onNavigate: () => void
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { role } = useManager()
+  const supabase = createClient()
+
+  async function handleSignOut() {
+    onNavigate()
+    await supabase.auth.signOut()
+    router.push('/manager/login')
+    router.refresh()
+  }
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href)
@@ -107,13 +117,13 @@ export function Sidebar({
         <div className="font-display text-[10px] tracking-widest text-warn">
           Protótipo · dados fictícios
         </div>
-        <Link
-          href="/manager/login"
-          onClick={onNavigate}
+        <button
+          type="button"
+          onClick={handleSignOut}
           className="inline-flex items-center min-h-11 text-xs text-g500 hover:text-paper mt-1"
         >
           Sair
-        </Link>
+        </button>
       </div>
     </aside>
   )

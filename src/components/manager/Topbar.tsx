@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useManager } from '@/lib/manager/store'
+import { createClient } from '@/lib/supabase/client'
 
 const TITLES: Record<string, string> = {
   '/manager': 'Dashboard',
@@ -19,8 +20,16 @@ const TITLES: Record<string, string> = {
 export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { role, setRole, user } = useManager()
+  const { role, user } = useManager()
   const [menuOpen, setMenuOpen] = useState(false)
+  const supabase = createClient()
+
+  async function handleSignOut() {
+    setMenuOpen(false)
+    await supabase.auth.signOut()
+    router.push('/manager/login')
+    router.refresh()
+  }
 
   const initials = user
     .split(' ')
@@ -57,23 +66,8 @@ export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
         />
       </div>
 
-      {/* seletor de papel (demonstração) — empurra o cluster da direita p/ o fim */}
-      <div className="flex border border-g300 overflow-hidden shrink-0 ml-auto">
-        {(['owner', 'staff'] as const).map((r) => (
-          <button
-            key={r}
-            onClick={() => setRole(r)}
-            className={`font-display text-xs tracking-wider min-h-11 px-3 sm:px-4 transition-colors ${
-              role === r ? 'bg-ink text-paper' : 'bg-surface text-g600 hover:text-ink'
-            }`}
-          >
-            {r === 'owner' ? 'Owner' : 'Staff'}
-          </button>
-        ))}
-      </div>
-
       {/* bloco do usuário — à direita, abre menu de contexto */}
-      <div className="relative shrink-0">
+      <div className="relative shrink-0 ml-auto">
         <button
           type="button"
           onClick={() => setMenuOpen((o) => !o)}
@@ -114,10 +108,7 @@ export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false)
-                  router.push('/manager/login')
-                }}
+                onClick={handleSignOut}
                 className="w-full text-left px-4 min-h-11 text-sm text-danger hover:bg-subtle transition-colors"
               >
                 Sair
