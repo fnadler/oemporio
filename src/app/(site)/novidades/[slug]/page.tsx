@@ -5,10 +5,14 @@ import { SiteNav } from '@/components/site/SiteNav'
 import { PostCard } from '@/components/site/PostCard'
 import { ShareBar } from '@/components/site/ShareBar'
 import { Gallery } from '@/components/site/Gallery'
-import { POSTS, getPost, img, dateFull, type PostBody } from '@/lib/site/posts'
+import { dateFull, type PostBody } from '@/lib/site/posts'
+import { getPostBySlug, getPublishedPosts, getPublishedSlugs } from '@/lib/site/postsData'
 
-export function generateStaticParams() {
-  return POSTS.map((p) => ({ slug: p.slug }))
+export const revalidate = 60
+
+export async function generateStaticParams() {
+  const slugs = await getPublishedSlugs()
+  return slugs.map((slug) => ({ slug }))
 }
 
 export async function generateMetadata({
@@ -17,7 +21,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const post = getPost(slug)
+  const post = await getPostBySlug(slug)
   if (!post) return { title: 'O Empório — Novidades' }
   return { title: `${post.titulo} — O Empório`, description: post.sub }
 }
@@ -39,8 +43,7 @@ function Block({ block }: { block: PostBody }) {
     )
   }
   if ('gallery' in block) {
-    const images = block.gallery.map((k) => img(k)).filter((v): v is string => Boolean(v))
-    return <Gallery images={images} />
+    return <Gallery images={block.gallery.filter(Boolean)} />
   }
   return null
 }
@@ -51,11 +54,11 @@ export default async function NovidadeDetail({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const post = getPost(slug)
+  const post = await getPostBySlug(slug)
   if (!post) notFound()
 
-  const photo = img(post.foto)
-  const others = POSTS.filter((p) => p.slug !== post.slug).slice(0, 3)
+  const allPosts = await getPublishedPosts()
+  const others = allPosts.filter((p) => p.slug !== post.slug).slice(0, 3)
 
   return (
     <section className="page novp detail">
@@ -69,10 +72,10 @@ export default async function NovidadeDetail({
           </div>
         </div>
 
-        {photo && (
+        {post.foto && (
           <div className="npd-photo-wrap">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="npd-photo" src={photo} alt={post.titulo} />
+            <img className="npd-photo" src={post.foto} alt={post.titulo} />
           </div>
         )}
 

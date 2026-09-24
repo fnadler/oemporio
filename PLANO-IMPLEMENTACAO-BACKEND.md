@@ -73,12 +73,18 @@ Implementadas como Next.js API Routes (consistente com o que já está em produ�
 
 Documentar o contrato (payload de entrada, resposta, códigos de erro) de cada uma antes de implementar — evita retrabalho quando o frontend for integrar.
 
-## Fase 5 — Integração do frontend (em andamento)
+## Fase 5 — Integração do frontend ✅ concluída (site público + Manager)
 
 **Site público:**
 - [x] `CouponModal.tsx` passa a chamar `/api/submit-lead` (novo contrato) em vez do `/api/leads` legado.
-- [ ] Cardápio e Novidades passam a ler de `menu_items`/`posts` (Supabase) em vez de dados estáticos/mock. **Pendência de decisão:** o design atual do Cardápio tem campos bem específicos por item (`rot`, `brick`, `off`, cores por card) que não mapeiam 1:1 com o schema genérico (`is_new`, `sold_out`, `tag_ids`) — precisa decidir como simplificar o layout ou estender o schema antes de converter. Também precisa popular dados reais no Supabase (hoje só staging tem schema, e vazio de cardápio/posts) antes do site parar de mostrar o conteúdo estático.
-- [ ] Seção do mapa/avaliações passa a ler `google_reviews_cache` e `site_settings`.
+- [x] **Cardápio e Novidades convertidos para ler do Supabase**, com o schema estendido (`meta`, `is_featured`, `variant` de tag — ver commit `2d789be`) para cobrir os campos específicos do design (ficha técnica, "Cervejaria do Mês", cores de tag) sem perder fidelidade visual.
+- [x] `scripts/seed-menu-and-posts.mjs`: migra o conteúdo hoje fixo no código (4 categorias, 10 tags, 21 itens, 6 categorias de novidade, 10 posts) para registros reais — idempotente, com `--dry-run` por padrão. Aplicado em staging.
+- [x] `createPublicClient()` novo em `src/lib/supabase/server.ts` — client anon/sem cookies pra páginas server component que só leem conteúdo público.
+- [x] `src/lib/manager/mock.ts` → `src/lib/site/posts.ts` e `.../postsData.ts`: mesma estratégia da store do Manager — tipos/helpers puros de um lado, adaptação Supabase→shape-que-a-UI-já-esperava do outro (`NovidadesList`/`PostCard`/página de detalhe não precisaram mudar sua lógica de exibição, só passaram a receber `posts` via prop em vez de importar um array estático).
+- [x] Testado com Playwright contra staging + screenshots: Taps, Comidas (fotos reais carregando), Vinhos, Bebidas, destaque "Cervejaria do Mês", badge "Esgotada", 7 novidades publicadas (3 rascunhos corretamente ocultos), post com vídeo do YouTube e galeria de imagens, navegação lista→detalhe.
+- [ ] Seção do mapa/avaliações (`google_reviews_cache`/`site_settings`) — adiada: depende de credenciais reais do Google Places, que ainda não temos (mesma pendência da Fase 4).
+
+**Nota sobre fotos:** `photo_path`/`cover_path` hoje guardam caminhos públicos existentes em `public/v2/img/` (não Storage do Supabase). Upload real de imagem pelo Manager (`PhotoUploader`/`GalleryUploader` ainda usam blob URLs que não persistem) fica como pendência separada — funciona para o conteúdo semeado, mas a equipe ainda não consegue trocar uma foto pelo Manager e ver persistir.
 
 **Autenticação do Manager (concluída):**
 - [x] Middleware real em `/manager/:path*` (mesmo padrão do `/admin`), mas checando `profiles.is_active` em vez de e-mail fixo.

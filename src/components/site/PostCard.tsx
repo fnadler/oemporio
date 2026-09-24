@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { type Post, img, dateChip, cardTone } from '@/lib/site/posts'
+import { type Post, dateChip, cardTone } from '@/lib/site/posts'
 
 /** Card "máscara" de uma novidade (usado na listagem e em "mais novidades"). */
 export function PostCard({ post, index }: { post: Post; index: number }) {
-  const photo = img(post.foto)
+  const photo = post.foto
   const { mes, dia } = dateChip(post.data)
 
   return (

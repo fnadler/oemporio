@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
@@ -32,6 +33,19 @@ export async function createClient() {
         },
       },
     }
+  )
+}
+
+/**
+ * Client para leitura pública (site) — anon key, sem cookies. Usado em
+ * páginas server component que só leem conteúdo público (cardápio, posts
+ * publicados), respeitando RLS normalmente. Não usar para nada que exija
+ * sessão ou escrita.
+ */
+export function createPublicClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 }
 

@@ -1,173 +1,145 @@
 import type { Metadata } from 'next'
-import { Fragment } from 'react'
 import { SiteNav } from '@/components/site/SiteNav'
 import { CategoryNav } from '@/components/site/CategoryNav'
+import { createPublicClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
   title: 'O Empório — Cardápio',
 }
 
-const CERVEJAS_URL = 'https://oemporio.pt/cervejas' // placeholder — substituir pela carta real
+export const revalidate = 60 // conteúdo vem do Manager — atualiza a cada 1 min
 
-type Tag = { label: string; cls: 'local' | 'new' | 'guest' | 'tap' | 'soldout' }
-interface TapItem {
-  n: string
-  name: string
-  tags?: Tag[]
+interface DbCategory {
+  id: string
+  slug: string | null
+  name_pt: string
+  with_photo: boolean
+  sort_order: number
+}
+interface DbTag {
+  id: string
+  label_pt: string
+  variant: 'local' | 'new' | 'guest' | 'tap'
+}
+interface DbItem {
+  id: string
+  category_id: string
+  name_pt: string
+  description_pt: string
+  price: number
+  price_unit: string
   meta: string
-  note: string
-  price: string
-  unit: string
-  off?: boolean
+  sold_out: boolean
+  is_new: boolean
+  is_featured: boolean
+  photo_path: string | null
 }
 
-const TAPS: TapItem[] = [
-  {
-    n: '01', name: 'Pale Ale da Casa',
-    tags: [{ label: 'Local', cls: 'local' }, { label: 'On Tap', cls: 'tap' }],
-    meta: 'LETRA · VILA VERDE — 5,0% ABV · 30 IBU',
-    note: 'Leve, floral e fácil de beber. O ponto de partida perfeito.',
-    price: '€4,50', unit: '/ 33cl',
-  },
-  {
-    n: '02', name: 'Sea Salt Gose',
-    tags: [{ label: 'Novidade', cls: 'new' }, { label: 'Local', cls: 'local' }],
-    meta: 'FERMENTAGE · PORTO — 4,3% ABV · 12 IBU',
-    note: 'Cítrica e levemente salgada, inspirada nas ondas da Ericeira.',
-    price: '€5,00', unit: '/ 33cl',
-  },
-  {
-    n: '03', name: 'Imperial Stout Barrel-Aged',
-    tags: [{ label: 'Convidada', cls: 'guest' }],
-    meta: 'VISTA · ERICEIRA — 9,5% ABV · 60 IBU',
-    note: 'Encorpada, com chocolate, café e um toque de madeira. Para saborear devagar.',
-    price: '€7,50', unit: '/ 25cl',
-  },
-  {
-    n: '04', name: 'Hazy NEIPA Tropical', off: true,
-    tags: [{ label: 'Esgotada', cls: 'soldout' }],
-    meta: 'EQUILIBREW · SINTRA — 6,5% ABV · 40 IBU',
-    note: 'Turva e suculenta, explosão de manga e maracujá. Volta em breve!',
-    price: '€6,00', unit: '/ 33cl',
-  },
-  {
-    n: '05', name: 'Lager Pilsner Clássica',
-    tags: [{ label: 'Local', cls: 'local' }],
-    meta: 'LOCALS ONLY · ERICEIRA — 4,8% ABV · 25 IBU',
-    note: 'Crocante, dourada e refrescante. A cerveja de todos os dias.',
-    price: '€4,00', unit: '/ 33cl',
-  },
-]
-
-const VINHOS: TapItem[] = [
-  {
-    n: '01', name: 'Vinho Verde da Casa', tags: [{ label: 'Branco', cls: 'local' }],
-    meta: 'LOUREIRO · MINHO — fresco & cítrico',
-    note: 'Leve e ligeiramente petillant. Perfeito para começar a noite.',
-    price: '€4,00', unit: 'copo · €16 garrafa',
-  },
-  {
-    n: '02', name: 'Tinto Alentejo', tags: [{ label: 'Tinto', cls: 'local' }],
-    meta: 'ARAGONEZ · TRINCADEIRA — encorpado',
-    note: 'Frutado e redondo, com taninos macios. Vai bem com a costela.',
-    price: '€4,50', unit: 'copo · €19 garrafa',
-  },
-  {
-    n: '03', name: 'Rosé da Ribeirinha', tags: [{ label: 'Rosé', cls: 'local' }],
-    meta: 'QUINTA DA RIBEIRINHA · LISBOA',
-    note: 'Seco, fresco e aromático. O favorito do fim de tarde.',
-    price: '€4,50', unit: 'copo · €18 garrafa',
-  },
-  {
-    n: '04', name: 'Branco Douro', tags: [{ label: 'Branco', cls: 'local' }],
-    meta: 'RABIGATO · VIOSINHO — mineral',
-    note: 'Estruturado e elegante, com final longo.',
-    price: '€5,00', unit: 'copo · €22 garrafa',
-  },
-]
-
-const BEBIDAS: TapItem[] = [
-  {
-    n: '01', name: 'Águas & Refrigerantes', tags: [{ label: 'Sem álcool', cls: 'local' }],
-    meta: 'ÁGUA · COLA · LIMONADA DA CASA',
-    note: 'Limonada caseira com hortelã e gengibre.',
-    price: '€2,00', unit: 'a partir de',
-  },
-  {
-    n: '02', name: 'Kombucha Artesanal', tags: [{ label: 'Novidade', cls: 'new' }],
-    meta: 'FERMENTADO LOCAL — gengibre & limão',
-    note: 'Refrescante e probiótica, opção leve sem álcool.',
-    price: '€4,00', unit: '/ 33cl',
-  },
-  {
-    n: '03', name: 'Café & Espresso',
-    meta: 'TORRA DE ESPECIALIDADE',
-    note: 'Espresso, duplo ou abatanado para fechar a refeição.',
-    price: '€1,50', unit: 'a partir de',
-  },
-  {
-    n: '04', name: 'Gin Tónico', tags: [{ label: 'Destilado', cls: 'local' }],
-    meta: 'GINS PREMIUM — perguntar ao staff',
-    note: 'Seleção de gins com tónicas e botânicos.',
-    price: '€7,00', unit: 'a partir de',
-  },
-  {
-    n: '05', name: 'Whisky & Destilados', tags: [{ label: 'Premium', cls: 'guest' }],
-    meta: 'SINGLE MALT · RUM · CONHAQUE',
-    note: 'Para saborear devagar, ao balcão.',
-    price: '€6,00', unit: 'a partir de',
-  },
-]
-
-interface Food {
-  img: string
-  rot: string
-  brick?: boolean
-  price: string
-  title: string[]
-  desc: string
+function formatPrice(n: number): string {
+  return `€${n.toFixed(2).replace('.', ',')}`
 }
 
-const FOODS: Food[] = [
-  { img: 'comida-burger-beef.jpg', rot: 'New on the Menu', brick: true, price: '€13,50', title: ['Burger', 'BEEF'], desc: 'Hambúrguer de vaca no pão da casa com a marca "O", bacon e queijo derretido.' },
-  { img: 'comida-costela-na-cerveja.jpg', rot: 'No Cardápio', price: '€13,00', title: ['Costela', 'na Cerveja'], desc: 'Costela desfiada, cozida lentamente na nossa cerveja, servida com pão.' },
-  { img: 'comida-kafta.jpg', rot: 'No Cardápio', price: '€11,00', title: ['Kafta', 'do Empório'], desc: 'Espetadas de kafta grelhada sobre rúcula, com queijo fresco.' },
-  { img: 'comida-provoleta.jpg', rot: 'No Cardápio', price: '€9,00', title: ['Provoleta'], desc: 'Provolone gratinado com tomate confitado e orégãos. Para partilhar.' },
-  { img: 'comida-3-porquinhos.jpg', rot: 'New on the Menu', brick: true, price: '€8,50', title: ['3 Porquinhos'], desc: 'Almôndegas de porco mal-passado com cebola roxa em pickles.' },
-  { img: 'comida-peru-panado.jpg', rot: 'No Cardápio', price: '€9,50', title: ['Peru', 'Panado'], desc: 'Tiras de peru panadas e crocantes, com maionese de ervas da casa.' },
-]
+async function getMenu() {
+  const supabase = createPublicClient()
+  const [{ data: categories }, { data: items }, { data: tags }, { data: itemTags }] = await Promise.all([
+    supabase.from('menu_categories').select('id, slug, name_pt, with_photo, sort_order').eq('is_active', true).order('sort_order'),
+    supabase.from('menu_items').select('id, category_id, name_pt, description_pt, price, price_unit, meta, sold_out, is_new, is_featured, photo_path').eq('is_active', true),
+    supabase.from('menu_tags').select('id, label_pt, variant'),
+    supabase.from('menu_item_tags').select('item_id, tag_id'),
+  ])
 
-function TapRow({ t }: { t: TapItem }) {
+  const tagById = new Map((tags ?? []).map((t) => [t.id, t as DbTag]))
+  const tagsByItem = new Map<string, DbTag[]>()
+  for (const link of itemTags ?? []) {
+    const tag = tagById.get(link.tag_id)
+    if (!tag) continue
+    const list = tagsByItem.get(link.item_id) ?? []
+    list.push(tag)
+    tagsByItem.set(link.item_id, list)
+  }
+
+  const itemsByCategory = new Map<string, DbItem[]>()
+  for (const item of (items ?? []) as DbItem[]) {
+    const list = itemsByCategory.get(item.category_id) ?? []
+    list.push(item)
+    itemsByCategory.set(item.category_id, list)
+  }
+
+  return {
+    categories: (categories ?? []) as DbCategory[],
+    itemsByCategory,
+    tagsByItem,
+  }
+}
+
+function TagBadge({ tag }: { tag: DbTag }) {
+  return <span className={`minitag ${tag.variant}`}>{tag.label_pt}</span>
+}
+
+function TapRow({ item, tags }: { item: DbItem; tags: DbTag[] }) {
   return (
-    <div className={`tap${t.off ? ' off' : ''}`}>
-      <div className="tn">{t.n}</div>
+    <div className={`tap${item.sold_out ? ' off' : ''}`}>
       <div className="info">
         <h4>
-          {t.name}{' '}
-          {t.tags?.map((tag) =>
-            tag.cls === 'soldout' ? (
-              <span className="soldout" key={tag.label}>
-                {tag.label}
-              </span>
-            ) : (
-              <span className={`minitag ${tag.cls}`} key={tag.label}>
-                {tag.label}
-              </span>
-            ),
-          )}
+          {item.name_pt} {tags.map((t) => <TagBadge key={t.id} tag={t} />)}
+          {item.sold_out && <span className="soldout">Esgotada</span>}
         </h4>
-        <div className="meta">{t.meta}</div>
-        <div className="note">{t.note}</div>
+        {item.meta && <div className="meta">{item.meta}</div>}
+        <div className="note">{item.description_pt}</div>
       </div>
       <div className="price">
-        <div className="v">{t.price}</div>
-        <div className="u">{t.unit}</div>
+        <div className="v">{formatPrice(item.price)}</div>
+        <div className="u">{item.price_unit}</div>
       </div>
     </div>
   )
 }
 
-export default function CardapioPage() {
+function FeaturedBeer({ item }: { item: DbItem }) {
+  const [brewery, specs] = item.meta.split(' — ')
+  return (
+    <div className="featbeer">
+      <div className="frame" />
+      <span className="rotulo coral">Cervejaria do Mês</span>
+      <div className="glass">🍺</div>
+      <div className="mid">
+        {brewery && <div className="brew">{brewery}</div>}
+        <h3>{item.name_pt}</h3>
+        <p>{item.description_pt}</p>
+      </div>
+      <div className="specs">
+        <div className="pr">{formatPrice(item.price)}</div>
+        {specs && <div className="ab">{specs}</div>}
+      </div>
+    </div>
+  )
+}
+
+function FoodCard({ item }: { item: DbItem }) {
+  const rot = item.is_new ? 'New on the Menu' : 'No Cardápio'
+  return (
+    <article className="fcard">
+      <div className="ph">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={item.photo_path ?? ''} alt={item.name_pt} />
+      </div>
+      <div className="scrim" />
+      <div className="frame" />
+      <span className={`rotulo${item.is_new ? ' brick' : ''} rot`}>{rot}</span>
+      <div className="price">{formatPrice(item.price)}</div>
+      <div className="bottom">
+        <h4>{item.name_pt}</h4>
+        <p>{item.description_pt}</p>
+      </div>
+    </article>
+  )
+}
+
+const CERVEJAS_URL = 'https://oemporio.pt/cervejas' // placeholder — vem de site_settings quando essa seção for integrada
+
+export default async function CardapioPage() {
+  const { categories, itemsByCategory, tagsByItem } = await getMenu()
+
   return (
     <section className="page menu" id="menu">
       <div className="menu-hero">
@@ -191,44 +163,44 @@ export default function CardapioPage() {
 
       <CategoryNav />
 
-      {/* ===== TAPS ===== */}
-      <section className="menu-sec" id="taps">
-        <div className="wrap">
-          <div className="sectitle">
-            <h2>Taps</h2>
-            <div className="line" />
-          </div>
-          <p className="secsub">
-            As nossas torneiras giram a toda a hora — seleção rotativa de cervejarias portuguesas.
-          </p>
+      {categories.map((cat) => {
+        const items = itemsByCategory.get(cat.id) ?? []
+        const featured = items.find((i) => i.is_featured)
+        const regular = items.filter((i) => !i.is_featured)
 
-          <div className="featbeer">
-            <div className="frame" />
-            <span className="rotulo coral">Cervejaria do Mês</span>
-            <div className="glass">🍺</div>
-            <div className="mid">
-              <div className="brew">Dois Corvos · Lisboa</div>
-              <h3>Finisterra · West Coast IPA</h3>
-              <p>
-                Amarga na medida, com cítricos do lúpulo americano e final seco. A queridinha da casa
-                neste mês.
-              </p>
+        return (
+          <section className="menu-sec" id={cat.slug ?? cat.id} key={cat.id}>
+            <div className="wrap">
+              <div className="sectitle">
+                <h2>{cat.name_pt}</h2>
+                <div className="line" />
+              </div>
+
+              {featured && <FeaturedBeer item={featured} />}
+
+              {cat.with_photo ? (
+                <div className="food-grid">
+                  {regular.map((item) => (
+                    <FoodCard key={item.id} item={item} />
+                  ))}
+                </div>
+              ) : (
+                <div className="taplist">
+                  {regular.map((item) => (
+                    <TapRow key={item.id} item={item} tags={tagsByItem.get(item.id) ?? []} />
+                  ))}
+                </div>
+              )}
+
+              {items.length === 0 && (
+                <p className="secsub">Cardápio em atualização — volte em breve.</p>
+              )}
             </div>
-            <div className="specs">
-              <div className="pr">€6,50</div>
-              <div className="ab">6,2% ABV · 55 IBU · 40cl</div>
-            </div>
-          </div>
+          </section>
+        )
+      })}
 
-          <div className="taplist">
-            {TAPS.map((t) => (
-              <TapRow t={t} key={t.n} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== DESTAQUE CERVEJAS ===== */}
+      {/* ===== DESTAQUE CERVEJAS (carta externa) ===== */}
       <section className="menu-sec" id="cervejas-hl">
         <div className="wrap">
           <div className="beerhi">
@@ -247,76 +219,6 @@ export default function CardapioPage() {
                 Ver carta de cervejas online ↗
               </a>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== COMIDAS ===== */}
-      <section className="menu-sec" id="comidas">
-        <div className="wrap">
-          <div className="sectitle">
-            <h2>Comidas</h2>
-            <div className="line" />
-          </div>
-          <p className="secsub">
-            Comfort food para dividir — cada prato montado na máscara de cardápio da marca.
-          </p>
-          <div className="food-grid">
-            {FOODS.map((f) => (
-              <article className="fcard" key={f.title.join(' ')}>
-                <div className="ph">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/v2/img/${f.img}`} alt={f.title.join(' ')} />
-                </div>
-                <div className="scrim" />
-                <div className="frame" />
-                <span className={`rotulo${f.brick ? ' brick' : ''} rot`}>{f.rot}</span>
-                <div className="price">{f.price}</div>
-                <div className="bottom">
-                  <h4>
-                    {f.title.map((line, i) => (
-                      <Fragment key={line}>
-                        {i > 0 && <br />}
-                        {line}
-                      </Fragment>
-                    ))}
-                  </h4>
-                  <p>{f.desc}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== VINHOS ===== */}
-      <section className="menu-sec" id="vinhos">
-        <div className="wrap">
-          <div className="sectitle">
-            <h2>Vinhos</h2>
-            <div className="line" />
-          </div>
-          <p className="secsub">Uma curadoria de vinhos portugueses para variar do lúpulo.</p>
-          <div className="taplist">
-            {VINHOS.map((t) => (
-              <TapRow t={t} key={t.n} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== BEBIDAS ===== */}
-      <section className="menu-sec" id="bebidas">
-        <div className="wrap">
-          <div className="sectitle">
-            <h2>Bebidas</h2>
-            <div className="line" />
-          </div>
-          <p className="secsub">Sem álcool, cafés e destilados para completar a mesa.</p>
-          <div className="taplist">
-            {BEBIDAS.map((t) => (
-              <TapRow t={t} key={t.n} />
-            ))}
           </div>
         </div>
       </section>

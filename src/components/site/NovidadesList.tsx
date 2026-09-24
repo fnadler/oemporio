@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { SiteNav } from './SiteNav'
 import { PostCard } from './PostCard'
-import { POSTS, type Post } from '@/lib/site/posts'
+import { type Post } from '@/lib/site/posts'
 
 const PER = 6
 
@@ -14,14 +14,14 @@ function matches(p: Post, q: string): boolean {
   return `${p.titulo} ${p.sub} ${p.cat} ${p.eyebrow} ${body}`.toLowerCase().includes(q)
 }
 
-export function NovidadesList() {
+export function NovidadesList({ posts }: { posts: Post[] }) {
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
-    return s ? POSTS.filter((p) => matches(p, s)) : POSTS
-  }, [q])
+    return s ? posts.filter((p) => matches(p, s)) : posts
+  }, [posts, q])
 
   const pages = Math.max(1, Math.ceil(filtered.length / PER))
   const current = Math.min(page, pages)
