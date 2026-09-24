@@ -104,7 +104,7 @@ interface ManagerCtx {
   // cardapio
   saveItem: (item: MenuItem) => void
   deleteItem: (id: string) => void
-  toggleItem: (id: string, field: 'is_active' | 'sold_out' | 'is_new') => void
+  toggleItem: (id: string, field: 'is_active' | 'sold_out' | 'is_new' | 'is_featured') => void
   saveMenuCategory: (cat: MenuCategory) => void
   deleteMenuCategory: (id: string) => void
   moveMenuCategory: (id: string, dir: -1 | 1) => void
@@ -247,10 +247,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       price: formatPrice(m.price),
       price_unit: m.price_unit,
       price_unit_en: m.price_unit_en,
+      meta: m.meta ?? '',
       tag_ids: (tagsByItem.get(m.id) ?? []).map((t) => t.tag_id as string),
       is_active: m.is_active,
       sold_out: m.sold_out,
       is_new: m.is_new,
+      is_featured: m.is_featured,
       photo: m.photo_path ?? undefined,
     }))
 
@@ -614,6 +616,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         void (async () => {
           const exists = data.menu.some((m) => m.id === item.id)
           const id = item.id || crypto.randomUUID()
+
+          // no máx. 1 item em destaque por categoria — troca automática
+          // (o índice único no banco bloquearia um segundo, então limpamos
+          // o anterior antes, em vez de deixar o usuário tomar um erro).
+          if (item.is_featured) {
+            await supabase
+              .from('menu_items')
+              .update({ is_featured: false })
+              .eq('category_id', item.category_id)
+              .eq('is_featured', true)
+              .neq('id', id)
+          }
+
           const payload = {
             category_id: item.category_id,
             name_pt: item.name_pt,
@@ -623,10 +638,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             price: parsePrice(item.price),
             price_unit: item.price_unit,
             price_unit_en: item.price_unit_en,
+            meta: item.meta,
             photo_path: item.photo ?? null,
             is_active: item.is_active,
             sold_out: item.sold_out,
             is_new: item.is_new,
+            is_featured: item.is_featured,
           }
           const { error } = exists
             ? await supabase.from('menu_items').update(payload).eq('id', id)
@@ -656,7 +673,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         void (async () => {
           const item = data.menu.find((m) => m.id === id)
           if (!item) return
-          const { error } = await supabase.from('menu_items').update({ [field]: !item[field] }).eq('id', id)
+          const turningOn = !item[field]
+          if (field === 'is_featured' && turningOn) {
+            await supabase
+              .from('menu_items')
+              .update({ is_featured: false })
+              .eq('category_id', item.category_id)
+              .eq('is_featured', true)
+              .neq('id', id)
+          }
+          const { error } = await supabase.from('menu_items').update({ [field]: turningOn }).eq('id', id)
           if (error) return toast(friendlyError(error), 'danger')
           await loadAll()
         })()
@@ -711,7 +737,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const { error } = exists
             ? await supabase
                 .from('menu_tags')
-                .update({ label_pt: tag.label_pt, label_en: tag.label_en })
+                .update({ label_pt: tag.label_pt, label_en: tag.label_en, variant: tag.variant })
                 .eq('id', tag.id)
             : await supabase.from('menu_tags').insert(tag)
           if (error) return toast(friendlyError(error), 'danger')

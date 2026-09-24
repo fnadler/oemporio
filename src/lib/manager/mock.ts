@@ -116,10 +116,14 @@ export interface MenuCategory {
   order: number // ordem de exibição (no site)
 }
 
+/** Variantes visuais da tag — estilos monocromáticos do site (ver site.css .minitag.*). */
+export type MenuTagVariant = 'local' | 'new' | 'guest' | 'tap'
+
 export interface MenuTag {
   id: string
   label_pt: string
   label_en: string
+  variant: MenuTagVariant
 }
 
 export interface MenuItem {
@@ -132,10 +136,14 @@ export interface MenuItem {
   price: string
   price_unit: string
   price_unit_en: string
+  /** Linha técnica (ex.: "LETRA · VILA VERDE — 5,0% ABV · 30 IBU"). */
+  meta: string
   tag_ids: string[]
   is_active: boolean
   sold_out: boolean
   is_new: boolean // destaque "Novo" no cardápio
+  /** Destaque especial (ex.: "Cervejaria do Mês") — no máx. 1 por categoria. */
+  is_featured: boolean
   photo?: string
 }
 

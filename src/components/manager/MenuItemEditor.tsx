@@ -15,10 +15,12 @@ export function blankMenuItem(categoryId: string): MenuItem {
     name_pt: '', name_en: '',
     description_pt: '', description_en: '',
     price: '', price_unit: '', price_unit_en: '',
+    meta: '',
     tag_ids: [],
     is_active: true,
     sold_out: false,
     is_new: false,
+    is_featured: false,
   }
 }
 
@@ -120,6 +122,15 @@ export function MenuItemEditor({ initial, onDone }: { initial: MenuItem; onDone:
             </Field>
           </div>
 
+          <Field label="Ficha técnica">
+            <input
+              className={inputCls}
+              placeholder="ex.: LETRA · VILA VERDE — 5,0% ABV · 30 IBU"
+              value={item.meta}
+              onChange={(e) => set({ meta: e.target.value })}
+            />
+          </Field>
+
           <Field label="Tags">
             <div className="flex gap-2 items-start">
               <div className="flex-1 border border-g300 bg-surface px-3 py-2 flex flex-wrap gap-2 items-center min-h-11">
@@ -167,7 +178,18 @@ export function MenuItemEditor({ initial, onDone }: { initial: MenuItem; onDone:
             <Toggle checked={item.is_active} onChange={() => set({ is_active: !item.is_active })} label="Ativo" />
             <Toggle checked={item.sold_out} onChange={() => set({ sold_out: !item.sold_out })} label="Esgotado" />
             <Toggle checked={item.is_new} onChange={() => set({ is_new: !item.is_new })} label="Novo (destaque)" />
+            <Toggle
+              checked={item.is_featured}
+              onChange={() => set({ is_featured: !item.is_featured })}
+              label="Destaque especial (ex.: Cervejaria do Mês)"
+            />
           </div>
+          {item.is_featured && (
+            <p className="text-xs text-g500">
+              Só pode haver 1 item em destaque por categoria — marcar este desativa automaticamente
+              qualquer outro destaque na mesma categoria.
+            </p>
+          )}
         </div>
       </div>
 

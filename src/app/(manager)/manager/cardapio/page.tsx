@@ -93,6 +93,7 @@ export default function CardapioPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-ink">{m.name_pt}</span>
                     {m.is_new && <Badge tone="ink">Novo</Badge>}
+                    {m.is_featured && <Badge tone="outline">★ Destaque</Badge>}
                   </div>
                   <div className="text-xs text-g500">{m.name_en || 'sem EN'}</div>
                 </td>
