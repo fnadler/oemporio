@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useManager } from '@/lib/manager/store'
 import { useToast } from '@/lib/manager/toast'
 import { useConfirm } from '@/lib/manager/confirm'
+import { uploadManagerImage } from '@/lib/manager/uploadImage'
 import { type Post, type PostBlock, type PostCategory } from '@/lib/manager/mock'
 import { Badge, Field, Select, Modal, inputCls, btn } from '@/components/manager/ui'
 
@@ -17,6 +18,7 @@ export function blankPost(): Post {
     subtitle_pt: '', subtitle_en: '',
     status: 'draft',
     date: new Date().toISOString().slice(0, 10),
+    cover_path: null,
     body: [],
   }
 }
@@ -162,13 +164,7 @@ export function PostEditor({ initial, onDone }: { initial: Post; onDone: () => v
               />
             </Field>
             <Field label="Imagem de capa">
-              <button
-                type="button"
-                className={`${btn('ghost')} w-full`}
-                onClick={() => toast('Upload simulado.', 'info')}
-              >
-                ⬆ Carregar (mock)
-              </button>
+              <CoverUploader cover={post.cover_path} onChange={(url) => set({ cover_path: url })} />
             </Field>
           </div>
 
@@ -370,6 +366,52 @@ function RichTextEditor({
 }
 
 /* ===== Galeria com upload múltiplo (mock) ===== */
+/** Uploader de imagem única (capa da novidade) — resize + WebP no servidor. */
+function CoverUploader({ cover, onChange }: { cover: string | null; onChange: (url: string | null) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
+  const [uploading, setUploading] = useState(false)
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    const result = await uploadManagerImage(file, 'posts', cover ?? undefined)
+    setUploading(false)
+    if ('error' in result) {
+      toast('Falha ao enviar a imagem. Tente um arquivo menor (até 8MB).', 'danger')
+      return
+    }
+    onChange(result.url)
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+      {cover ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={cover} alt="" className="w-20 h-20 object-cover border border-g200" />
+          <div className="flex gap-2">
+            <button type="button" className={btn('ghost')} disabled={uploading} onClick={() => inputRef.current?.click()}>
+              {uploading ? 'Enviando…' : 'Trocar'}
+            </button>
+            <button type="button" className={btn('danger')} disabled={uploading} onClick={() => onChange(null)}>
+              Remover
+            </button>
+          </div>
+        </>
+      ) : (
+        <button type="button" className={`${btn('ghost')} w-full`} disabled={uploading} onClick={() => inputRef.current?.click()}>
+          {uploading ? 'Enviando…' : '⬆ Carregar imagem de capa'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** Upload múltiplo (galeria de novidade) — cada imagem passa por resize + WebP no servidor. */
 function GalleryUploader({
   images,
   onChange,
@@ -378,18 +420,31 @@ function GalleryUploader({
   onChange: (imgs: string[]) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
+  const [uploading, setUploading] = useState(false)
 
-  function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
-    if (files.length) onChange([...images, ...files.map((f) => URL.createObjectURL(f))])
     e.target.value = '' // permite reenviar os mesmos arquivos
+    if (!files.length) return
+    setUploading(true)
+    const uploaded: string[] = []
+    let failures = 0
+    for (const file of files) {
+      const result = await uploadManagerImage(file, 'posts')
+      if ('error' in result) failures++
+      else uploaded.push(result.url)
+    }
+    setUploading(false)
+    if (uploaded.length) onChange([...images, ...uploaded])
+    if (failures) toast(`${failures} imagem(ns) falharam ao enviar.`, 'danger')
   }
 
   return (
     <div>
       <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={onFiles} />
-      <button type="button" className={btn('ghost')} onClick={() => inputRef.current?.click()}>
-        ⬆ Adicionar imagens
+      <button type="button" className={btn('ghost')} disabled={uploading} onClick={() => inputRef.current?.click()}>
+        {uploading ? 'Enviando…' : '⬆ Adicionar imagens'}
       </button>
       {images.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">

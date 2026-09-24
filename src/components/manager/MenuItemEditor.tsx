@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useManager } from '@/lib/manager/store'
 import { useToast } from '@/lib/manager/toast'
+import { uploadManagerImage } from '@/lib/manager/uploadImage'
 import { sortedMenuCategories, menuCategoryById, type MenuItem } from '@/lib/manager/mock'
 import { Field, Select, Toggle, inputCls, btn } from '@/components/manager/ui'
 import { MenuCategoryManager } from '@/components/manager/MenuCategoryManager'
@@ -210,11 +211,21 @@ export function MenuItemEditor({ initial, onDone }: { initial: MenuItem; onDone:
 
 function PhotoUploader({ photo, onChange }: { photo?: string; onChange: (p: string | undefined) => void }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
+  const [uploading, setUploading] = useState(false)
 
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (file) onChange(URL.createObjectURL(file))
     e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    const result = await uploadManagerImage(file, 'menu', photo)
+    setUploading(false)
+    if ('error' in result) {
+      toast('Falha ao enviar a foto. Tente uma imagem menor (até 8MB).', 'danger')
+      return
+    }
+    onChange(result.url)
   }
 
   return (
@@ -225,10 +236,10 @@ function PhotoUploader({ photo, onChange }: { photo?: string; onChange: (p: stri
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={photo} alt="" className="w-20 h-20 object-cover border border-g200" />
           <div className="flex gap-2">
-            <button type="button" className={btn('ghost')} onClick={() => inputRef.current?.click()}>
-              Trocar
+            <button type="button" className={btn('ghost')} disabled={uploading} onClick={() => inputRef.current?.click()}>
+              {uploading ? 'Enviando…' : 'Trocar'}
             </button>
-            <button type="button" className={btn('danger')} onClick={() => onChange(undefined)}>
+            <button type="button" className={btn('danger')} disabled={uploading} onClick={() => onChange(undefined)}>
               Remover
             </button>
           </div>
@@ -236,8 +247,8 @@ function PhotoUploader({ photo, onChange }: { photo?: string; onChange: (p: stri
       ) : (
         <>
           <div className="w-20 h-20 bg-g200 flex items-center justify-center text-g400 text-xs">sem foto</div>
-          <button type="button" className={btn('ghost')} onClick={() => inputRef.current?.click()}>
-            ⬆ Carregar foto
+          <button type="button" className={btn('ghost')} disabled={uploading} onClick={() => inputRef.current?.click()}>
+            {uploading ? 'Enviando…' : '⬆ Carregar foto'}
           </button>
         </>
       )}

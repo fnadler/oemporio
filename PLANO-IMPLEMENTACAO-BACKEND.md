@@ -84,7 +84,9 @@ Documentar o contrato (payload de entrada, resposta, códigos de erro) de cada u
 - [x] Testado com Playwright contra staging + screenshots: Taps, Comidas (fotos reais carregando), Vinhos, Bebidas, destaque "Cervejaria do Mês", badge "Esgotada", 7 novidades publicadas (3 rascunhos corretamente ocultos), post com vídeo do YouTube e galeria de imagens, navegação lista→detalhe.
 - [ ] Seção do mapa/avaliações (`google_reviews_cache`/`site_settings`) — adiada: depende de credenciais reais do Google Places, que ainda não temos (mesma pendência da Fase 4).
 
-**Nota sobre fotos:** `photo_path`/`cover_path` hoje guardam caminhos públicos existentes em `public/v2/img/` (não Storage do Supabase). Upload real de imagem pelo Manager (`PhotoUploader`/`GalleryUploader` ainda usam blob URLs que não persistem) fica como pendência separada — funciona para o conteúdo semeado, mas a equipe ainda não consegue trocar uma foto pelo Manager e ver persistir.
+**Upload real de foto ✅ implementado** (era a pendência acima): novo bucket `media` no Supabase Storage (público para leitura, escrita só via rota autenticada), rota `/api/manager/upload-image` que confere sessão+perfil ativo, processa a imagem com `sharp` (resize máx. 1600px + conversão pra WebP, qualidade 82) e sobe pro Storage — usada por `PhotoUploader` (item do cardápio), a capa da novidade (que antes era 100% decorativa — nem o tipo `Post` tinha o campo) e `GalleryUploader`. Ao trocar uma foto, a antiga é apagada do Storage (nunca mexe nos caminhos estáticos semeados em `/v2/img/`). Testado contra staging: upload real retorna URL do Storage, bloqueado sem sessão (401), arquivo final confirmado como WebP válido e ~29% menor que o original.
+
+As fotos semeadas (`/v2/img/*.jpg`) continuam como estão — só as fotos novas, trocadas pelo Manager a partir de agora, passam pelo pipeline de otimização.
 
 **Autenticação do Manager (concluída):**
 - [x] Middleware real em `/manager/:path*` (mesmo padrão do `/admin`), mas checando `profiles.is_active` em vez de e-mail fixo.

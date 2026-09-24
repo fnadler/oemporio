@@ -102,6 +102,7 @@ export interface Post {
   subtitle_en: string
   status: 'draft' | 'published'
   date: string // ISO (YYYY-MM-DD) — mapeia para `posts.published_at`
+  cover_path: string | null
   body: PostBlock[]
 }
 

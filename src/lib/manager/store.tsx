@@ -279,6 +279,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       subtitle_en: p.subtitle_en,
       status: p.status,
       date: (p.published_at ?? '').slice(0, 10),
+      cover_path: p.cover_path,
       body: p.body ?? [],
     }))
 
@@ -558,6 +559,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             title_en: post.title_en,
             subtitle_pt: post.subtitle_pt,
             subtitle_en: post.subtitle_en,
+            cover_path: post.cover_path,
             body: post.body,
             status: post.status,
             published_at: post.date,
