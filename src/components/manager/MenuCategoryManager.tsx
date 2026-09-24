@@ -51,7 +51,7 @@ export function MenuCategoryManager({ onClose }: { onClose: () => void }) {
       const order = data.menuCategories.length
         ? Math.max(...data.menuCategories.map((c) => c.order)) + 1
         : 0
-      saveMenuCategory({ id: `mcat-${Math.random().toString(36).slice(2, 8)}`, order, ...clean })
+      saveMenuCategory({ id: crypto.randomUUID(), order, ...clean })
     }
     reset()
   }

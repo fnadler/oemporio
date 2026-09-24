@@ -96,6 +96,7 @@ function VoucherCard({
     ['Utilizado', fmtDate(v.redeemed_at)],
     ['Expira', fmtDate(v.expires_at)],
     ['Desconto', `${v.discount_pct}%`],
+    ...(v.redeemed_by ? ([['Validado por', v.redeemed_by]] as [string, string][]) : []),
   ]
 
   return (

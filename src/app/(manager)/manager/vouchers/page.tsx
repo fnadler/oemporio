@@ -201,7 +201,10 @@ export default function VouchersPage() {
                   </td>
                   <td className="px-4 py-3 text-g600">{fmtDate(v.issued_at)}</td>
                   <td className="px-4 py-3 text-g600">{fmtDate(v.expires_at)}</td>
-                  <td className="px-4 py-3 text-g600">{fmtDate(v.redeemed_at)}</td>
+                  <td className="px-4 py-3 text-g600">
+                    {fmtDate(v.redeemed_at)}
+                    {v.redeemed_by && <div className="text-xs text-g500">por {v.redeemed_by}</div>}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       {v.status === 'issued' ? (

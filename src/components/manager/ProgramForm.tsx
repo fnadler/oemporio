@@ -7,7 +7,7 @@ import { Field, inputCls, btn } from '@/components/manager/ui'
 export type ProgramDraft = Pick<LoyaltyProgram, 'name' | 'points_required' | 'items'>
 
 export function newItemId(): string {
-  return `item-${Math.random().toString(36).slice(2, 8)}`
+  return crypto.randomUUID()
 }
 
 /** Formulário de cadastro do programa (Nome, Selos, Itens de consumo). */

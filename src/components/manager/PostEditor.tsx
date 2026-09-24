@@ -433,7 +433,7 @@ function CategoryManager({ onClose }: { onClose: () => void }) {
   }
   const submit = () => {
     if (!pt.trim()) return
-    const id = editId ?? `catnews-${Math.random().toString(36).slice(2, 8)}`
+    const id = editId ?? crypto.randomUUID()
     savePostCategory({ id, label_pt: pt.trim(), label_en: en.trim() || pt.trim() })
     reset()
   }

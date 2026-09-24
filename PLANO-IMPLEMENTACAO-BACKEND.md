@@ -88,11 +88,14 @@ Documentar o contrato (payload de entrada, resposta, códigos de erro) de cada u
 - [x] Removido o seletor de papel (owner/staff) que existia na Topbar como recurso de demonstração do protótipo — o papel real virá do perfil autenticado quando a store for trocada.
 - [x] Testado de ponta a ponta com Playwright (instalado como devDependency): acesso não autenticado bloqueado, credenciais erradas mostram erro, login correto entra no dashboard, sessão persiste ao recarregar, sign-out realmente encerra a sessão (tentativa de voltar pra `/manager` é bloqueada de novo).
 
-**Manager:**
-- [ ] Substituir `src/lib/manager/store.tsx` (mock em memória) por um client real do Supabase — mesma interface (`useManager()`) por trás, mas as funções (`saveItem`, `redeemVoucher`, `markStamp` etc.) passam a fazer queries/mutations reais, preservando o contrato que a UI já espera. Isso minimiza mudança nas 17 telas já construídas.
-- [ ] Adicionar **middleware de autenticação real** em `/manager/:path*`, no mesmo padrão do que já protege `/admin/:path*` hoje.
-- [ ] Trocar a tela de login decorativa por `supabase.auth.signInWithPassword` de verdade.
-- [ ] Verificar papel (`owner`/`staff`) nas rotas que hoje só checam no client (Configurações, Perfis).
+**Manager — store real (concluída):**
+- [x] `src/lib/manager/store.tsx` reescrita por completo: carrega tudo do Supabase (15 queries em paralelo) e monta a mesma forma de dados que as 17 telas já esperavam (`MockData`) — nenhuma tela precisou mudar sua lógica de leitura. Todas as 27 funções de mutação (`redeemVoucher`, `saveItem`, `markStamp`, `inviteProfile` etc.) viraram chamadas reais ao Supabase (ou às Edge Functions da Fase 4, no caso de vouchers/convites), seguidas de um recarregamento completo (`loadAll()`) — simples e sempre consistente com o que os triggers do banco realmente aplicaram.
+- [x] `src/lib/manager/mock.ts` reduzido a tipos + helpers puros de formatação (os dados fictícios/seed foram removidos — não são mais usados).
+- [x] **Achado corrigido antes de testar:** 5 lugares na UI geravam IDs falsos no formato `prefixo-abc123` (`fidelidade/novo`, `MenuCategoryManager`, `MenuTagManager`, `PostEditor`, `ProgramForm`) — como as colunas do banco são `uuid`, o Postgres teria rejeitado todo insert vindo desses formulários. Trocados para `crypto.randomUUID()`.
+- [x] Fechadas 2 pontas que ficaram pendentes de decisões anteriores: campo **Google Place ID** adicionado à tela de Configurações (decisão #18 só tinha entrado no schema, não na UI), e **"Validado por"** agora aparece na ficha do voucher e na listagem (decisão #9).
+- [x] Testado: dados reais carregando (25 clientes/vouchers migrados na Fase 3, paginação ok), criação de programa de fidelidade com UUID real gravado no banco, atribuição de cliente a programa gravando o vínculo real — confirmado direto no banco de staging, não só na tela. As demais mutações (cardápio, novidades, tags, categorias, perfis) seguem exatamente o mesmo padrão já testado (upsert por existência de id) e passaram no type-check, mas não foram clicadas uma a uma nesta rodada.
+- [x] Autenticação real (middleware + login) — ver bloco acima.
+- [ ] Verificar papel (`owner`/`staff`) nas rotas que hoje só checam `role !== 'owner'` no client (Configurações, Perfis) — a checagem client-side já existe (`<Restricted/>`), mas vale confirmar que RLS bloqueia mesmo uma chamada direta de um `staff` (as policies já fazem isso — `owner manages loyalty programs`, `owner updates site settings` etc. — falta só um teste dedicado logado como staff, deixado para a Fase 6).
 
 ## Fase 6 — QA de segurança e regras de negócio
 

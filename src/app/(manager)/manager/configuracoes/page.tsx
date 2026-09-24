@@ -91,6 +91,27 @@ export default function ConfiguracoesPage() {
           </Field>
         </div>
 
+        <Field label="Google Place ID">
+          <input
+            className={inputCls}
+            placeholder="ex.: ChIJN1t_tDeuEmsRUsoyG83frY4"
+            value={form.google_place_id}
+            onChange={(e) => set({ google_place_id: e.target.value })}
+          />
+        </Field>
+        <p className="text-xs text-g500 -mt-3">
+          Usado para buscar a nota e as avaliações do Google automaticamente. Encontre o Place ID em{' '}
+          <a
+            href="https://developers.google.com/maps/documentation/places/web-service/place-id"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            developers.google.com/maps/.../place-id
+          </a>
+          .
+        </p>
+
         <div className="border-t border-g200 pt-5">
           <h3 className="font-display text-sm text-ink mb-3">Voucher de boas-vindas</h3>
           <div className="grid sm:grid-cols-2 gap-4">

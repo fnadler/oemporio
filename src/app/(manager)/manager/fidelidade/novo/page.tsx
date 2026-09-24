@@ -27,7 +27,7 @@ export default function NovoProgramaPage() {
 
   const create = () => {
     const program: LoyaltyProgram = {
-      id: `prog-${Math.random().toString(36).slice(2, 9)}`,
+      id: crypto.randomUUID(),
       name: draft.name.trim(),
       is_active: true,
       points_required: draft.points_required,
