@@ -85,6 +85,13 @@ export function LoyaltyCartela({ customerId }: { customerId: string }) {
         {threshold} selos
       </p>
 
+      {!program.is_active && (
+        <div className="bg-warn/10 border border-warn text-ink text-sm px-4 py-3 mb-5">
+          Este programa foi encerrado em {fmtDate(program.deactivated_at)}. A equipe ainda pode
+          registrar e resgatar selos para quem já participava, mas ele não aceita novas atribuições.
+        </div>
+      )}
+
       {/* big numbers */}
       <div className="grid grid-cols-2 sm:max-w-md gap-4 mb-7">
         <StatCard label="Itens consumidos" value={consumed} hint="selos registrados" />

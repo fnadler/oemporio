@@ -105,12 +105,12 @@ As fotos semeadas (`/v2/img/*.jpg`) continuam como estão — só as fotos novas
 - [x] Autenticação real (middleware + login) — ver bloco acima.
 - [ ] Verificar papel (`owner`/`staff`) nas rotas que hoje só checam `role !== 'owner'` no client (Configurações, Perfis) — a checagem client-side já existe (`<Restricted/>`), mas vale confirmar que RLS bloqueia mesmo uma chamada direta de um `staff` (as policies já fazem isso — `owner manages loyalty programs`, `owner updates site settings` etc. — falta só um teste dedicado logado como staff, deixado para a Fase 6).
 
-## Fase 6 — QA de segurança e regras de negócio
+## Fase 6 — QA de segurança e regras de negócio ✅ concluída
 
-- [ ] Testar RLS logado como `staff` e como `owner` — confirmar que `staff` não acessa Configurações/Perfis mesmo forçando a URL.
-- [ ] Testar as regras de negócio decididas: exclusão de categoria com itens vinculados é bloqueada (constraint `ON DELETE RESTRICT`); item sem foto obrigatória é bloqueado (trigger); troca de programa de fidelidade preserva histórico; programa inativo permite novo selo com alerta na tela.
-- [ ] Rodar o checklist de segurança do §6 da spec (CAPTCHA, honeypot, rate limit, headers) contra os novos endpoints.
-- [ ] Testar o último-owner-não-pode-ser-rebaixado em `profiles`.
+- [x] **RLS como staff vs owner** — testado direto no banco (não só na UI): staff NÃO consegue escrever em `site_settings` nem criar `loyalty_programs` nem se auto-promover a owner (RLS bloqueia de verdade — o valor não muda, mesmo sem erro explícito em `UPDATE`, que é como RLS se manifesta nesse caso); staff CONSEGUE mexer em cardápio/posts/vouchers/fidelidade (permitido). Na UI, staff forçando a URL de `/manager/configuracoes` e `/manager/perfis` cai no `<Restricted/>`, e a sidebar mostra 🔒 nesses itens — testado com Playwright.
+- [x] **Regras de negócio**, todas confirmadas: exclusão de categoria com item vinculado bloqueada (FK); item sem foto em categoria `with_photo` bloqueado (trigger); troca de programa de fidelidade preserva cartela/selos antigos (não apaga nada); programa inativo ainda aceita novo selo. **Achado corrigido:** o alerta "este programa foi encerrado em dd/mm/aaaa" (decisão original) nunca tinha sido implementado na tela — só o filtro que impede nova atribuição existia. Adicionado em `LoyaltyCartela.tsx`.
+- [x] Checklist de segurança do `/api/submit-lead`: headers (CSP/HSTS/X-Frame-Options/etc.) presentes em toda rota, honeypot retorna sucesso falso sem gravar, captcha ausente bloqueia (`RECAPTCHA_FAILED`), rate limit dispara exatamente no limite configurado (5 requisições/10min por IP).
+- [x] Último owner não pode ser rebaixado nem desativado — confirmado tanto via UI (já testado na Fase 2) quanto direto no banco nesta rodada.
 
 ## Fase 7 — Corte para produção
 
